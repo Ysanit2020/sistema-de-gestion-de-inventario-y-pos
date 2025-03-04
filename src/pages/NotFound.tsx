@@ -1,5 +1,8 @@
+
+import React from "react";
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import Button from "@/components/ui-custom/Button";
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,13 +15,18 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
+        <span className="inline-block px-4 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full mb-4">
+          404 Error
+        </span>
+        <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">Page not found</h1>
+        <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <Button size="lg" as="a" href="/">
           Return to Home
-        </a>
+        </Button>
       </div>
     </div>
   );
