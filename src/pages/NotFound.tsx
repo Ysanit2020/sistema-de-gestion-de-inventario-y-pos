@@ -1,6 +1,6 @@
 
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import Button from "@/components/ui-custom/Button";
 
@@ -24,9 +24,11 @@ const NotFound = () => {
         <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <Button size="lg" as="a" href="/">
-          Return to Home
-        </Button>
+        <Link to="/">
+          <Button size="lg">
+            Return to Home
+          </Button>
+        </Link>
       </div>
     </div>
   );
