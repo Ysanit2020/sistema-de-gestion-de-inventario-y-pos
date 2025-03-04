@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
-import { db, UsuarioInterface } from "@/services/database";
+import { UsuarioInterface, dbAPI } from "@/services/database-electron";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
@@ -31,12 +31,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       // Buscar usuario en la base de datos
-      const user = await db.usuarios
-        .where("usuario")
-        .equals(username)
-        .first();
+      const user = await dbAPI.login(username, password);
       
-      if (user && user.password === password) {
+      if (user) {
         setCurrentUser(user);
         localStorage.setItem("currentUser", JSON.stringify(user));
         

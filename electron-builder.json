@@ -1,0 +1,23 @@
+
+{
+  "appId": "com.miempresa.sistemagestion",
+  "productName": "Sistema de Gestión",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*"
+  ],
+  "mac": {
+    "category": "public.app-category.business",
+    "target": "dmg"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": "AppImage",
+    "category": "Office"
+  }
+}
