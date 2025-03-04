@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -6,12 +5,25 @@ import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save } from "lucide-react";
 import { db } from "@/services/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ProductoForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const isEditMode = Boolean(id);
+  
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate("/dashboard");
+      toast({
+        title: "Acceso denegado",
+        description: "No tienes permisos para acceder a esta página",
+        variant: "destructive"
+      });
+    }
+  }, [isAdmin, navigate, toast]);
   
   const [producto, setProducto] = useState({
     codigo: "",
@@ -124,7 +136,6 @@ const ProductoForm = () => {
           description: "Producto actualizado correctamente",
         });
       } else {
-        // Verificar si ya existe un producto con el mismo código
         const productoExistente = await db.productos
           .where('codigo')
           .equals(producto.codigo)

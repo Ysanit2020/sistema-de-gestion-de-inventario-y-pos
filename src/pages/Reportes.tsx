@@ -5,11 +5,18 @@ import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ArrowLeft, FileText, TrendingUp, Package } from "lucide-react";
-import { db } from "@/services/database";
+import { db, ItemVentaInterface } from "@/services/database";
+
+interface ProductoPopular {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  total: number;
+}
 
 const Reportes = () => {
-  const [ventasPorDia, setVentasPorDia] = useState([]);
-  const [productosPopulares, setProductosPopulares] = useState([]);
+  const [ventasPorDia, setVentasPorDia] = useState<{fecha: string, total: number}[]>([]);
+  const [productosPopulares, setProductosPopulares] = useState<ProductoPopular[]>([]);
   const [inventarioBajo, setInventarioBajo] = useState([]);
   const [totalVentas, setTotalVentas] = useState(0);
   const [numTransacciones, setNumTransacciones] = useState(0);
@@ -51,7 +58,7 @@ const Reportes = () => {
   };
 
   const agruparVentasPorDia = (ventas) => {
-    const ventasPorDia = {};
+    const ventasPorDia: {[key: string]: number} = {};
     
     ventas.forEach(venta => {
       const fecha = new Date(venta.fecha).toLocaleDateString();
@@ -67,11 +74,11 @@ const Reportes = () => {
     })).slice(-7); // Últimos 7 días
   };
 
-  const calcularProductosPopulares = (ventas) => {
-    const contadorProductos = {};
+  const calcularProductosPopulares = (ventas): ProductoPopular[] => {
+    const contadorProductos: {[key: number]: ProductoPopular} = {};
     
     ventas.forEach(venta => {
-      venta.productos.forEach(producto => {
+      venta.productos.forEach((producto: ItemVentaInterface) => {
         if (!contadorProductos[producto.id]) {
           contadorProductos[producto.id] = {
             id: producto.id,

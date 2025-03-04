@@ -1,25 +1,31 @@
 
-import Dexie from 'dexie';
+import Dexie from "dexie";
 
-// Definir la base de datos
-class InventarioDB extends Dexie {
-  productos: Dexie.Table<ProductoType, number>;
-  ventas: Dexie.Table<VentaType, number>;
-  
+// Definición de la base de datos
+export class AppDatabase extends Dexie {
+  productos: Dexie.Table<ProductoInterface, number>;
+  ventas: Dexie.Table<VentaInterface, number>;
+  usuarios: Dexie.Table<UsuarioInterface, number>;
+
   constructor() {
-    super('inventarioDB');
+    super("gestorDB");
+    
+    // Definir esquemas de tablas
     this.version(1).stores({
-      productos: '++id, codigo, nombre, categoria, stock',
-      ventas: '++id, fecha'
+      productos: "++id, codigo, nombre, categoria, precio",
+      ventas: "++id, fecha",
+      usuarios: "++id, usuario, password, rol"
     });
     
-    this.productos = this.table('productos');
-    this.ventas = this.table('ventas');
+    // Typed tables
+    this.productos = this.table("productos");
+    this.ventas = this.table("ventas");
+    this.usuarios = this.table("usuarios");
   }
 }
 
-// Tipos
-export interface ProductoType {
+// Interfaces de datos
+export interface ProductoInterface {
   id?: number;
   codigo: string;
   nombre: string;
@@ -31,134 +37,114 @@ export interface ProductoType {
   stockMinimo?: number;
 }
 
-export interface ItemVentaType extends ProductoType {
+export interface ItemVentaInterface {
+  id: number;
+  codigo: string;
+  nombre: string;
+  precio: number;
   cantidad: number;
+  stock: number;
 }
 
-export interface VentaType {
+export interface VentaInterface {
   id?: number;
   fecha: Date;
-  productos: ItemVentaType[];
+  productos: ItemVentaInterface[];
   total: number;
-  cliente?: string;
-  metodoPago?: string;
+  pagoCon?: number;
+  cambio?: number;
 }
 
-// Crear y exportar la instancia de la base de datos
-export const db = new InventarioDB();
+export interface UsuarioInterface {
+  id?: number;
+  usuario: string;
+  password: string;
+  rol: "admin" | "trabajador";
+  nombre?: string;
+}
 
-// Inicializar datos de ejemplo si la base de datos está vacía
+// Instancia de la base de datos
+export const db = new AppDatabase();
+
+// Función para inicializar datos de ejemplo
 export const inicializarDatos = async () => {
-  const count = await db.productos.count();
+  // Verificar si ya existen productos
+  const countProductos = await db.productos.count();
   
-  if (count === 0) {
-    // Insertar productos de ejemplo
-    const productosEjemplo = [
+  if (countProductos === 0) {
+    // Agregar productos de ejemplo
+    await db.productos.bulkAdd([
       {
-        codigo: "A001",
-        nombre: "Arroz",
-        descripcion: "Arroz blanco de grano largo",
-        categoria: "Granos",
-        precio: 2.50,
-        costo: 1.80,
+        codigo: "P001",
+        nombre: "Arroz Integral 1kg",
+        descripcion: "Arroz integral de alta calidad",
+        categoria: "Abarrotes",
+        precio: 28.50,
+        costo: 22.00,
         stock: 50,
         stockMinimo: 10
       },
       {
-        codigo: "A002",
-        nombre: "Frijoles",
-        descripcion: "Frijoles negros",
-        categoria: "Granos",
-        precio: 1.75,
-        costo: 1.20,
+        codigo: "P002",
+        nombre: "Frijol Negro 1kg",
+        descripcion: "Frijol negro seleccionado",
+        categoria: "Abarrotes",
+        precio: 32.00,
+        costo: 25.00,
         stock: 40,
         stockMinimo: 8
       },
       {
-        codigo: "B001",
-        nombre: "Azúcar",
-        descripcion: "Azúcar refinada",
-        categoria: "Básicos",
-        precio: 2.25,
-        costo: 1.70,
-        stock: 30,
-        stockMinimo: 15
-      },
-      {
-        codigo: "B002",
-        nombre: "Aceite",
-        descripcion: "Aceite vegetal",
-        categoria: "Básicos",
-        precio: 4.50,
-        costo: 3.20,
+        codigo: "P003",
+        nombre: "Aceite de Oliva 500ml",
+        descripcion: "Aceite de oliva extra virgen",
+        categoria: "Aceites",
+        precio: 85.00,
+        costo: 65.00,
         stock: 25,
-        stockMinimo: 10
-      },
-      {
-        codigo: "C001",
-        nombre: "Leche",
-        descripcion: "Leche entera",
-        categoria: "Lácteos",
-        precio: 3.25,
-        costo: 2.50,
-        stock: 20,
-        stockMinimo: 8
-      },
-      {
-        codigo: "C002",
-        nombre: "Queso",
-        descripcion: "Queso fresco",
-        categoria: "Lácteos",
-        precio: 5.75,
-        costo: 4.50,
-        stock: 15,
         stockMinimo: 5
       },
       {
-        codigo: "D001",
-        nombre: "Jabón",
-        descripcion: "Jabón de baño",
-        categoria: "Limpieza",
-        precio: 1.50,
-        costo: 0.90,
-        stock: 35,
-        stockMinimo: 10
+        codigo: "P004",
+        nombre: "Azúcar Refinada 1kg",
+        descripcion: "Azúcar blanca refinada",
+        categoria: "Abarrotes",
+        precio: 25.00,
+        costo: 20.00,
+        stock: 60,
+        stockMinimo: 15
       },
       {
-        codigo: "D002",
-        nombre: "Detergente",
-        descripcion: "Detergente en polvo",
-        categoria: "Limpieza",
-        precio: 6.25,
-        costo: 4.80,
-        stock: 20,
-        stockMinimo: 7
+        codigo: "P005",
+        nombre: "Sal de Mesa 1kg",
+        descripcion: "Sal refinada",
+        categoria: "Abarrotes",
+        precio: 15.00,
+        costo: 10.00,
+        stock: 70,
+        stockMinimo: 20
       }
-    ];
-    
-    await db.productos.bulkAdd(productosEjemplo);
-    console.log("Datos de ejemplo añadidos a la base de datos");
+    ]);
   }
-};
 
-// Función para obtener estadísticas rápidas
-export const obtenerEstadisticas = async () => {
-  const totalProductos = await db.productos.count();
-  const valorInventario = await db.productos
-    .toArray()
-    .then(productos => 
-      productos.reduce((total, producto) => 
-        total + (producto.precio * producto.stock), 0)
-    );
+  // Verificar si ya existen usuarios
+  const countUsuarios = await db.usuarios.count();
   
-  const productosPocoStock = await db.productos
-    .where('stock')
-    .below(10)
-    .count();
-  
-  return {
-    totalProductos,
-    valorInventario,
-    productosPocoStock
-  };
+  if (countUsuarios === 0) {
+    // Agregar usuarios por defecto
+    await db.usuarios.bulkAdd([
+      {
+        usuario: "admin",
+        password: "admin123", // En una aplicación real deberías usar hash
+        rol: "admin",
+        nombre: "Administrador"
+      },
+      {
+        usuario: "vendedor",
+        password: "vendedor123", // En una aplicación real deberías usar hash
+        rol: "trabajador",
+        nombre: "Vendedor"
+      }
+    ]);
+  }
 };

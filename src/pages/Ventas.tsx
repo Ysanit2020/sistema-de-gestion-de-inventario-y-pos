@@ -4,15 +4,19 @@ import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, DollarSign } from "lucide-react";
 import { db } from "@/services/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Ventas = () => {
   const [productos, setProductos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [carrito, setCarrito] = useState([]);
-  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [pagoCon, setPagoCon] = useState("");
+  const [cambio, setCambio] = useState(0);
+  const [mostrarCambio, setMostrarCambio] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     cargarProductos();
@@ -46,6 +50,11 @@ const Ventas = () => {
       setCarrito([...carrito, { ...producto, cantidad: 1 }]);
     }
     
+    // Resetear cálculo de cambio cuando cambia el carrito
+    setPagoCon("");
+    setCambio(0);
+    setMostrarCambio(false);
+    
     toast({
       title: "Añadido",
       description: `${producto.nombre} agregado al carrito`,
@@ -62,16 +71,43 @@ const Ventas = () => {
     }).filter(Boolean);
     
     setCarrito(nuevoCarrito);
+    
+    // Resetear cálculo de cambio cuando cambia el carrito
+    setPagoCon("");
+    setCambio(0);
+    setMostrarCambio(false);
   };
 
   const eliminarDelCarrito = (id) => {
     setCarrito(carrito.filter(item => item.id !== id));
+    
+    // Resetear cálculo de cambio cuando cambia el carrito
+    setPagoCon("");
+    setCambio(0);
+    setMostrarCambio(false);
   };
 
   const totalVenta = carrito.reduce(
     (total, item) => total + item.precio * item.cantidad, 
     0
   );
+
+  const calcularCambio = () => {
+    const montoRecibido = parseFloat(pagoCon);
+    
+    if (isNaN(montoRecibido) || montoRecibido < totalVenta) {
+      toast({
+        title: "Error",
+        description: "El monto recibido debe ser mayor o igual al total",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const cambioCalculado = montoRecibido - totalVenta;
+    setCambio(cambioCalculado);
+    setMostrarCambio(true);
+  };
 
   const buscarProducto = async (e) => {
     if (e.key === 'Enter' && busqueda) {
@@ -109,11 +145,23 @@ const Ventas = () => {
     }
 
     try {
+      // Verificar si se calculó el cambio
+      if (!mostrarCambio) {
+        toast({
+          title: "Calcule el cambio",
+          description: "Ingrese el monto con el que paga el cliente",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Crear nueva venta
       const nuevaVenta = {
         fecha: new Date(),
         productos: carrito,
         total: totalVenta,
+        pagoCon: parseFloat(pagoCon),
+        cambio: cambio
       };
       
       // Guardar venta en la base de datos
@@ -131,8 +179,11 @@ const Ventas = () => {
         description: `Venta #${ventaId} registrada correctamente`,
       });
       
-      // Limpiar carrito
+      // Limpiar carrito y resetear
       setCarrito([]);
+      setPagoCon("");
+      setCambio(0);
+      setMostrarCambio(false);
       
       // Recargar productos para actualizar stock
       cargarProductos();
@@ -214,14 +265,19 @@ const Ventas = () => {
               <Button 
                 variant="outline" 
                 className="text-sm"
-                onClick={() => setCarrito([])}
+                onClick={() => {
+                  setCarrito([]);
+                  setPagoCon("");
+                  setCambio(0);
+                  setMostrarCambio(false);
+                }}
                 disabled={carrito.length === 0}
               >
                 Limpiar
               </Button>
             </div>
 
-            <div className="min-h-[300px] max-h-[500px] overflow-y-auto mb-4">
+            <div className="min-h-[300px] max-h-[400px] overflow-y-auto mb-4">
               {carrito.length > 0 ? (
                 carrito.map((item) => (
                   <div key={item.id} className="border-b py-3">
@@ -280,9 +336,51 @@ const Ventas = () => {
                 <span>Total:</span>
                 <span>${totalVenta.toFixed(2)}</span>
               </div>
+              
+              {carrito.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium mb-1">
+                        Pago con:
+                      </label>
+                      <div className="flex">
+                        <div className="bg-muted flex items-center justify-center px-3 border border-r-0 rounded-l-md">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <input
+                          type="number"
+                          value={pagoCon}
+                          onChange={(e) => setPagoCon(e.target.value)}
+                          className="flex-1 p-2 border rounded-r-md"
+                          min={totalVenta}
+                          step="0.50"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={calcularCambio}
+                      className="self-end"
+                      disabled={!pagoCon || parseFloat(pagoCon) < totalVenta}
+                    >
+                      Calcular
+                    </Button>
+                  </div>
+                  
+                  {mostrarCambio && (
+                    <div className="bg-primary/10 p-3 rounded-md mb-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Cambio a devolver:</span>
+                        <span className="text-xl font-bold">${cambio.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <Button 
                 className="w-full"
-                disabled={carrito.length === 0}
+                disabled={carrito.length === 0 || !mostrarCambio}
                 onClick={procesarVenta}
               >
                 Completar Venta

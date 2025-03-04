@@ -1,20 +1,33 @@
-
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Search, Edit, Trash2 } from "lucide-react";
 import { db } from "@/services/database";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Inventario = () => {
   const [productos, setProductos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   
   useEffect(() => {
+    // Redireccionar si no es administrador
+    if (!isAdmin) {
+      navigate("/dashboard");
+      toast({
+        title: "Acceso denegado",
+        description: "No tienes permisos para acceder a esta página",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     cargarProductos();
-  }, []);
+  }, [isAdmin, navigate, toast]);
 
   const cargarProductos = async () => {
     try {
