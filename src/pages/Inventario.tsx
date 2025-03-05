@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Search, Edit, Trash2 } from "lucide-react";
-import { db } from "@/services/database";
+import { dbAPI, ProductoInterface } from "@/services/database-electron";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Inventario = () => {
-  const [productos, setProductos] = useState([]);
+  const [productos, setProductos] = useState<ProductoInterface[]>([]);
   const [busqueda, setBusqueda] = useState("");
   const { toast } = useToast();
   const { isAdmin } = useAuth();
@@ -31,7 +32,7 @@ const Inventario = () => {
 
   const cargarProductos = async () => {
     try {
-      const productosGuardados = await db.productos.toArray();
+      const productosGuardados = await dbAPI.getProductos();
       setProductos(productosGuardados);
     } catch (error) {
       console.error("Error al cargar productos:", error);
@@ -43,9 +44,9 @@ const Inventario = () => {
     }
   };
 
-  const eliminarProducto = async (id) => {
+  const eliminarProducto = async (id: number) => {
     try {
-      await db.productos.delete(id);
+      await dbAPI.deleteProducto(id);
       toast({
         title: "Éxito",
         description: "Producto eliminado correctamente",

@@ -1,4 +1,6 @@
 // Interfaces
+import { db } from "./database";
+
 export interface ProductoInterface {
   id?: number;
   codigo: string;
