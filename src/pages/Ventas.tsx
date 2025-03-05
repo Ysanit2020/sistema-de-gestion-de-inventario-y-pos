@@ -6,12 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, DollarSign } from "lucide-react";
 import { db } from "@/services/database";
 import { useAuth } from "@/contexts/AuthContext";
-import { dbAPI } from "@/services/database-electron";
+import { dbAPI, ProductoInterface } from "@/services/database-electron";
+
+interface ProductoEnSubalmacen extends ProductoInterface {
+  productoId?: number;
+}
 
 const Ventas = () => {
-  const [productos, setProductos] = useState([]);
+  const [productos, setProductos] = useState<ProductoEnSubalmacen[]>([]);
   const [busqueda, setBusqueda] = useState("");
-  const [carrito, setCarrito] = useState([]);
+  const [carrito, setCarrito] = useState<any[]>([]);
   const [pagoCon, setPagoCon] = useState("");
   const [cambio, setCambio] = useState(0);
   const [mostrarCambio, setMostrarCambio] = useState(false);
@@ -25,14 +29,14 @@ const Ventas = () => {
   const cargarProductos = async () => {
     try {
       if (subalmacenId) {
-        // Si el usuario tiene un subalmacén asignado, cargar solo los productos de ese subalmacén
+        console.log("Cargando productos del subalmacén:", subalmacenId);
         const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
         
-        // Filtrar productos que tienen stock
         const productosConStock = inventario.filter(item => item.stock > 0);
+        console.log("Productos con stock en subalmacén:", productosConStock);
         setProductos(productosConStock);
       } else {
-        // Fallback para usuarios sin subalmacén asignado
+        console.log("Usuario sin subalmacén asignado, cargando todos los productos");
         const productosGuardados = await dbAPI.getProductos();
         setProductos(productosGuardados.filter(producto => producto.stock > 0));
       }
@@ -46,8 +50,12 @@ const Ventas = () => {
     }
   };
 
-  const agregarAlCarrito = (producto) => {
-    const itemExistente = carrito.find(item => item.id === producto.id);
+  const agregarAlCarrito = (producto: ProductoEnSubalmacen) => {
+    const itemExistente = carrito.find(item => 
+      item.id === (producto.productoId || producto.id)
+    );
+    
+    const productoId = producto.productoId || producto.id;
     
     if (itemExistente) {
       if (itemExistente.cantidad + 1 > producto.stock) {
@@ -60,7 +68,7 @@ const Ventas = () => {
       }
       
       const nuevoCarrito = carrito.map(item => 
-        item.id === producto.id 
+        item.id === productoId
           ? { ...item, cantidad: item.cantidad + 1 } 
           : item
       );
@@ -68,6 +76,7 @@ const Ventas = () => {
     } else {
       setCarrito([...carrito, { 
         ...producto, 
+        id: productoId,
         cantidad: 1,
         subalmacenId: subalmacenId
       }]);
@@ -142,7 +151,7 @@ const Ventas = () => {
     setMostrarCambio(true);
   };
 
-  const buscarProducto = async (e) => {
+  const buscarProducto = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && busqueda) {
       try {
         const producto = await db.productos
@@ -160,6 +169,7 @@ const Ventas = () => {
             if (inventario && inventario.stock > 0) {
               agregarAlCarrito({
                 ...producto,
+                productoId: producto.id,
                 stock: inventario.stock
               });
               setBusqueda("");
@@ -219,16 +229,14 @@ const Ventas = () => {
       
       const ventaId = await db.ventas.add(nuevaVenta);
       
-      // Actualizar inventario
       for (const item of carrito) {
         if (subalmacenId) {
           try {
-            // Actualizar el stock en el subalmacén
             await dbAPI.transferirProducto(
               item.id,
               item.cantidad,
               subalmacenId,
-              0 // 0 representa una venta (no se transfiere a otro almacén)
+              0
             );
           } catch (err) {
             console.error("Error al actualizar inventario:", err);
@@ -239,7 +247,6 @@ const Ventas = () => {
             });
           }
         } else {
-          // Fallback para sistema sin subalmacenes
           await db.productos.update(item.id, {
             stock: item.stock - item.cantidad
           });
@@ -303,7 +310,7 @@ const Ventas = () => {
             {productosFiltrados.length > 0 ? (
               productosFiltrados.map((producto) => (
                 <Card 
-                  key={producto.id} 
+                  key={producto.productoId || producto.id} 
                   className="p-4 cursor-pointer hover:bg-accent"
                   onClick={() => agregarAlCarrito(producto)}
                 >
