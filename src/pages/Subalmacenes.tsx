@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Warehouse, Save, Plus, Minus, Trash2, ArrowRightLeft, Pencil } from "lucide-react";
@@ -6,6 +7,7 @@ import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { dbAPI, SubalmacenInterface, ProductoInterface } from "@/services/database-electron";
+import { db } from "@/services/database";
 
 const Subalmacenes = () => {
   const { isAdmin } = useAuth();
@@ -45,9 +47,11 @@ const Subalmacenes = () => {
   const cargarDatos = async () => {
     try {
       const subalmacenesData = await dbAPI.getSubalmacenes();
+      console.log("Subalmacenes cargados:", subalmacenesData);
       setSubalmacenes(subalmacenesData);
       
       const productosData = await dbAPI.getProductos();
+      console.log("Productos cargados:", productosData);
       setProductos(productosData);
       
       if (subalmacenesData.length > 0 && !origenId) {
@@ -68,7 +72,9 @@ const Subalmacenes = () => {
   
   const cargarInventarioSubalmacen = async (subalmacenId: number) => {
     try {
+      console.log("Cargando inventario del subalmacén:", subalmacenId);
       const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
+      console.log("Inventario cargado:", inventario);
       setInventarioSubalmacen(inventario);
     } catch (error) {
       console.error("Error al cargar inventario:", error);
@@ -207,7 +213,11 @@ const Subalmacenes = () => {
     
     try {
       let exito = true;
+      console.log("Iniciando transferencias:", transferenciasValidas);
+      
       for (const { productoId, cantidad } of transferenciasValidas) {
+        console.log("Transferir:", { productoId, cantidad, origenId, destinoId });
+        
         const resultado = await dbAPI.transferirProducto(
           productoId,
           cantidad,
@@ -215,9 +225,11 @@ const Subalmacenes = () => {
           destinoId
         );
         
+        console.log("Resultado transferencia:", resultado);
+        
         if (!resultado) {
           exito = false;
-          break;
+          console.error("Error en transferencia de producto ID:", productoId);
         }
       }
       

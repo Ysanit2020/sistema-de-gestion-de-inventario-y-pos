@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -51,11 +52,10 @@ const Ventas = () => {
   };
 
   const agregarAlCarrito = (producto: ProductoEnSubalmacen) => {
-    const itemExistente = carrito.find(item => 
-      item.id === (producto.productoId || producto.id)
-    );
-    
     const productoId = producto.productoId || producto.id;
+    const itemExistente = carrito.find(item => 
+      item.id === productoId
+    );
     
     if (itemExistente) {
       if (itemExistente.cantidad + 1 > producto.stock) {
@@ -98,7 +98,7 @@ const Ventas = () => {
         const nuevaCantidad = item.cantidad + cambio;
         
         if (cambio > 0) {
-          const producto = productos.find(p => p.id === id);
+          const producto = productos.find(p => (p.productoId || p.id) === id);
           if (producto && nuevaCantidad > producto.stock) {
             toast({
               title: "Stock insuficiente",
@@ -229,34 +229,58 @@ const Ventas = () => {
       
       const ventaId = await db.ventas.add(nuevaVenta);
       
+      // Procesar cada producto del carrito
+      let todoCorrecto = true;
+      
       for (const item of carrito) {
         if (subalmacenId) {
           try {
-            await dbAPI.transferirProducto(
+            console.log("Transferir producto de venta:", {
+              id: item.id,
+              cantidad: item.cantidad,
+              origen: subalmacenId
+            });
+            
+            const transferido = await dbAPI.transferirProducto(
               item.id,
               item.cantidad,
               subalmacenId,
-              0
+              0 // 0 indica que es una venta
             );
+            
+            if (!transferido) {
+              todoCorrecto = false;
+              console.error("Error al transferir producto:", item);
+            }
           } catch (err) {
             console.error("Error al actualizar inventario:", err);
-            toast({
-              title: "Error de inventario",
-              description: "No se pudo actualizar el inventario correctamente",
-              variant: "destructive"
-            });
+            todoCorrecto = false;
           }
         } else {
-          await db.productos.update(item.id, {
-            stock: item.stock - item.cantidad
-          });
+          // Si no hay subalmacén, actualizar el stock general
+          try {
+            await db.productos.update(item.id, {
+              stock: item.stock - item.cantidad
+            });
+          } catch (err) {
+            console.error("Error al actualizar stock:", err);
+            todoCorrecto = false;
+          }
         }
       }
       
-      toast({
-        title: "Venta realizada",
-        description: `Venta #${ventaId} registrada correctamente`,
-      });
+      if (!todoCorrecto) {
+        toast({
+          title: "Advertencia",
+          description: "La venta se registró pero hubo problemas actualizando el inventario",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Venta realizada",
+          description: `Venta #${ventaId} registrada correctamente`,
+        });
+      }
       
       setCarrito([]);
       setPagoCon("");

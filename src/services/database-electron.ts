@@ -1,3 +1,4 @@
+
 // Interfaces
 import { db } from "./database";
 
@@ -71,7 +72,12 @@ export const dbAPI = {
     } else {
       // Fallback para desarrollo sin Electron
       console.warn("Electron no disponible, usando datos de ejemplo");
-      return [];
+      try {
+        return await db.productos.toArray();
+      } catch (error) {
+        console.error("Error al obtener productos:", error);
+        return [];
+      }
     }
   },
   
@@ -80,7 +86,12 @@ export const dbAPI = {
       return window.electronAPI.getProducto(id);
     } else {
       console.warn("Electron no disponible");
-      return undefined;
+      try {
+        return await db.productos.get(id);
+      } catch (error) {
+        console.error("Error al obtener producto:", error);
+        return undefined;
+      }
     }
   },
   
@@ -89,7 +100,32 @@ export const dbAPI = {
       return window.electronAPI.saveProducto(producto);
     } else {
       console.warn("Electron no disponible");
-      return producto;
+      try {
+        if (producto.id) {
+          // Actualizar producto existente
+          await db.productos.update(producto.id, producto);
+          return producto;
+        } else {
+          // Nuevo producto
+          const id = await db.productos.add(producto);
+          
+          // Si hay subalmacenes, inicializar inventario en almacén principal
+          const subalmacenes = await db.subalmacenes.toArray();
+          if (subalmacenes.length > 0) {
+            const almacenPrincipal = subalmacenes[0];
+            await db.inventarioSubalmacen.add({
+              productoId: id,
+              subalmacenId: almacenPrincipal.id!,
+              stock: producto.stock
+            });
+          }
+          
+          return { ...producto, id };
+        }
+      } catch (error) {
+        console.error("Error al guardar producto:", error);
+        return producto;
+      }
     }
   },
   
@@ -98,7 +134,21 @@ export const dbAPI = {
       return window.electronAPI.deleteProducto(id);
     } else {
       console.warn("Electron no disponible");
-      return true;
+      try {
+        // Eliminar el producto
+        await db.productos.delete(id);
+        
+        // Eliminar registros de inventario relacionados
+        await db.inventarioSubalmacen
+          .where('productoId')
+          .equals(id)
+          .delete();
+          
+        return true;
+      } catch (error) {
+        console.error("Error al eliminar producto:", error);
+        return false;
+      }
     }
   },
   
@@ -136,7 +186,13 @@ export const dbAPI = {
       return window.electronAPI.saveVenta(venta);
     } else {
       console.warn("Electron no disponible");
-      return venta;
+      try {
+        const id = await db.ventas.add(venta);
+        return { ...venta, id };
+      } catch (error) {
+        console.error("Error al guardar venta:", error);
+        return venta;
+      }
     }
   },
   
@@ -145,7 +201,12 @@ export const dbAPI = {
       return window.electronAPI.getVentas();
     } else {
       console.warn("Electron no disponible, usando datos de ejemplo");
-      return [];
+      try {
+        return await db.ventas.toArray();
+      } catch (error) {
+        console.error("Error al obtener ventas:", error);
+        return [];
+      }
     }
   },
   
@@ -155,10 +216,12 @@ export const dbAPI = {
       return window.electronAPI.getSubalmacenes();
     } else {
       console.warn("Electron no disponible, usando datos de ejemplo");
-      return [
-        { id: 1, nombre: "Almacén Principal" },
-        { id: 2, nombre: "Punto de Venta" }
-      ];
+      try {
+        return await db.subalmacenes.toArray();
+      } catch (error) {
+        console.error("Error al obtener subalmacenes:", error);
+        return [];
+      }
     }
   },
   
@@ -167,7 +230,18 @@ export const dbAPI = {
       return window.electronAPI.saveSubalmacen(subalmacen);
     } else {
       console.warn("Electron no disponible");
-      return subalmacen;
+      try {
+        if (subalmacen.id) {
+          await db.subalmacenes.update(subalmacen.id, subalmacen);
+          return subalmacen;
+        } else {
+          const id = await db.subalmacenes.add(subalmacen);
+          return { ...subalmacen, id };
+        }
+      } catch (error) {
+        console.error("Error al guardar subalmacen:", error);
+        return subalmacen;
+      }
     }
   },
   
@@ -176,7 +250,34 @@ export const dbAPI = {
       return window.electronAPI.deleteSubalmacen(id);
     } else {
       console.warn("Electron no disponible");
-      return true;
+      try {
+        // Eliminar el subalmacén
+        await db.subalmacenes.delete(id);
+        
+        // Eliminar todos los registros de inventario asociados
+        await db.inventarioSubalmacen
+          .where('subalmacenId')
+          .equals(id)
+          .delete();
+          
+        // Actualizar usuarios que tenían asignado este subalmacén
+        const usuarios = await db.usuarios
+          .where('subalmacenId')
+          .equals(id)
+          .toArray();
+        
+        for (const usuario of usuarios) {
+          await db.usuarios.update(usuario.id!, {
+            ...usuario,
+            subalmacenId: undefined
+          });
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Error al eliminar subalmacen:", error);
+        return false;
+      }
     }
   },
   
@@ -224,11 +325,15 @@ export const dbAPI = {
       console.warn("Electron no disponible, simulando transferencia");
       
       try {
+        console.log("Transferir:", { productoId, cantidad, origenId, destinoId });
+        
         // Verificar stock en el origen
         const inventarioOrigen = await db.inventarioSubalmacen
           .where('[productoId+subalmacenId]')
           .equals([productoId, origenId])
           .first();
+        
+        console.log("Inventario origen:", inventarioOrigen);
         
         if (!inventarioOrigen || inventarioOrigen.stock < cantidad) {
           console.error("Stock insuficiente para transferir");
@@ -236,7 +341,7 @@ export const dbAPI = {
         }
         
         // Actualizar stock en origen (siempre necesario)
-        await db.inventarioSubalmacen.update(inventarioOrigen.id, {
+        await db.inventarioSubalmacen.update(inventarioOrigen.id!, {
           stock: inventarioOrigen.stock - cantidad
         });
         
@@ -248,9 +353,11 @@ export const dbAPI = {
             .equals([productoId, destinoId])
             .first();
           
+          console.log("Inventario destino:", inventarioDestino);
+          
           if (inventarioDestino) {
             // Actualizar stock existente
-            await db.inventarioSubalmacen.update(inventarioDestino.id, {
+            await db.inventarioSubalmacen.update(inventarioDestino.id!, {
               stock: inventarioDestino.stock + cantidad
             });
           } else {

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Search, Edit, Trash2, ArrowRightLeft } from "lucide-react";
 import { dbAPI, ProductoInterface, SubalmacenInterface } from "@/services/database-electron";
 import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/services/database";
 
 const Inventario = () => {
   const [productos, setProductos] = useState<ProductoInterface[]>([]);
@@ -42,10 +43,12 @@ const Inventario = () => {
     try {
       // Cargar productos del almacén principal
       const productosGuardados = await dbAPI.getProductos();
+      console.log("Productos cargados:", productosGuardados);
       setProductos(productosGuardados);
       
       // Cargar subalmacenes
       const subalmacenesGuardados = await dbAPI.getSubalmacenes();
+      console.log("Subalmacenes cargados:", subalmacenesGuardados);
       setSubalmacenes(subalmacenesGuardados);
       
       // Cargar inventario de cada subalmacén
@@ -54,6 +57,7 @@ const Inventario = () => {
       for (const subalmacen of subalmacenesGuardados) {
         if (subalmacen.id) {
           const inventario = await dbAPI.getInventarioSubalmacen(subalmacen.id);
+          console.log(`Inventario subalmacén ${subalmacen.id}:`, inventario);
           inventarioTemp[subalmacen.id] = {};
           
           // Organizar el inventario por producto
@@ -65,6 +69,7 @@ const Inventario = () => {
         }
       }
       
+      console.log("Inventario organizado:", inventarioTemp);
       setInventarioSubalmacen(inventarioTemp);
     } catch (error) {
       console.error("Error al cargar datos:", error);
@@ -123,6 +128,8 @@ const Inventario = () => {
     
     // Verificar stock disponible
     const stockOrigen = getStockEnSubalmacen(productoSeleccionado.id!, origen);
+    console.log("Stock origen:", stockOrigen, "Cantidad a transferir:", cantidad);
+    
     if (stockOrigen < cantidad) {
       toast({
         title: "Error",
@@ -133,12 +140,21 @@ const Inventario = () => {
     }
     
     try {
+      console.log("Intentando transferir:", {
+        productoId: productoSeleccionado.id!,
+        cantidad,
+        origen,
+        destino
+      });
+      
       const resultado = await dbAPI.transferirProducto(
         productoSeleccionado.id!,
         cantidad,
         origen,
         destino
       );
+      
+      console.log("Resultado transferencia:", resultado);
       
       if (resultado) {
         toast({
