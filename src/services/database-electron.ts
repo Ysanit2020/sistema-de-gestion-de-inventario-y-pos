@@ -19,6 +19,7 @@ export interface ItemVentaInterface {
   precio: number;
   cantidad: number;
   stock: number;
+  subalmacenId?: number;
 }
 
 export interface VentaInterface {
@@ -28,6 +29,8 @@ export interface VentaInterface {
   total: number;
   pagoCon?: number;
   cambio?: number;
+  subalmacenId?: number;
+  vendedorId?: number;
 }
 
 export interface UsuarioInterface {
@@ -36,6 +39,21 @@ export interface UsuarioInterface {
   password: string;
   rol: "admin" | "trabajador";
   nombre?: string;
+  subalmacenId?: number;
+}
+
+export interface SubalmacenInterface {
+  id?: number;
+  nombre: string;
+  direccion?: string;
+  descripcion?: string;
+}
+
+export interface InventarioSubalmacenInterface {
+  id?: number;
+  productoId: number;
+  subalmacenId: number;
+  stock: number;
 }
 
 // Verificar si estamos en entorno Electron
@@ -103,7 +121,8 @@ export const dbAPI = {
           usuario: "vendedor",
           password: "vendedor123",
           rol: "trabajador",
-          nombre: "Vendedor"
+          nombre: "Vendedor",
+          subalmacenId: 2
         };
       }
       return null;
@@ -127,6 +146,115 @@ export const dbAPI = {
       console.warn("Electron no disponible, usando datos de ejemplo");
       return [];
     }
+  },
+  
+  // Subalmacenes
+  getSubalmacenes: async (): Promise<SubalmacenInterface[]> => {
+    if (isElectron()) {
+      return window.electronAPI.getSubalmacenes();
+    } else {
+      console.warn("Electron no disponible, usando datos de ejemplo");
+      return [
+        { id: 1, nombre: "Almacén Principal" },
+        { id: 2, nombre: "Punto de Venta" }
+      ];
+    }
+  },
+  
+  saveSubalmacen: async (subalmacen: SubalmacenInterface): Promise<SubalmacenInterface> => {
+    if (isElectron()) {
+      return window.electronAPI.saveSubalmacen(subalmacen);
+    } else {
+      console.warn("Electron no disponible");
+      return subalmacen;
+    }
+  },
+  
+  deleteSubalmacen: async (id: number): Promise<boolean> => {
+    if (isElectron()) {
+      return window.electronAPI.deleteSubalmacen(id);
+    } else {
+      console.warn("Electron no disponible");
+      return true;
+    }
+  },
+  
+  // Inventario de subalmacenes
+  getInventarioSubalmacen: async (subalmacenId: number): Promise<any[]> => {
+    if (isElectron()) {
+      return window.electronAPI.getInventarioSubalmacen(subalmacenId);
+    } else {
+      console.warn("Electron no disponible, usando datos de ejemplo");
+      return [];
+    }
+  },
+  
+  transferirProducto: async (productoId: number, cantidad: number, origenId: number, destinoId: number): Promise<boolean> => {
+    if (isElectron()) {
+      return window.electronAPI.transferirProducto(productoId, cantidad, origenId, destinoId);
+    } else {
+      console.warn("Electron no disponible");
+      return true;
+    }
+  },
+  
+  // Gestión de usuarios
+  getUsuarios: async (): Promise<UsuarioInterface[]> => {
+    if (isElectron()) {
+      return window.electronAPI.getUsuarios();
+    } else {
+      console.warn("Electron no disponible, usando datos de ejemplo");
+      return [
+        { id: 1, usuario: "admin", password: "admin123", rol: "admin", nombre: "Administrador" },
+        { id: 2, usuario: "vendedor", password: "vendedor123", rol: "trabajador", nombre: "Vendedor", subalmacenId: 2 }
+      ];
+    }
+  },
+  
+  saveUsuario: async (usuario: UsuarioInterface): Promise<UsuarioInterface> => {
+    if (isElectron()) {
+      return window.electronAPI.saveUsuario(usuario);
+    } else {
+      console.warn("Electron no disponible");
+      return usuario;
+    }
+  },
+  
+  deleteUsuario: async (id: number): Promise<boolean> => {
+    if (isElectron()) {
+      return window.electronAPI.deleteUsuario(id);
+    } else {
+      console.warn("Electron no disponible");
+      return true;
+    }
+  },
+  
+  changePassword: async (userId: number, oldPassword: string, newPassword: string): Promise<boolean> => {
+    if (isElectron()) {
+      return window.electronAPI.changePassword(userId, oldPassword, newPassword);
+    } else {
+      console.warn("Electron no disponible");
+      return true;
+    }
+  },
+  
+  // Configuración
+  saveTheme: async (theme: string): Promise<boolean> => {
+    if (isElectron()) {
+      return window.electronAPI.saveTheme(theme);
+    } else {
+      console.warn("Electron no disponible");
+      localStorage.setItem("theme", theme);
+      return true;
+    }
+  },
+  
+  getTheme: async (): Promise<string> => {
+    if (isElectron()) {
+      return window.electronAPI.getTheme();
+    } else {
+      console.warn("Electron no disponible");
+      return localStorage.getItem("theme") || "light";
+    }
   }
 };
-

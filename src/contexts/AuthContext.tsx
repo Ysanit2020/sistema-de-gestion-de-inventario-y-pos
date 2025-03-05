@@ -10,6 +10,8 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
+  subalmacenId: number | undefined;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +75,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
   
+  const refreshUser = async () => {
+    if (currentUser?.id) {
+      try {
+        const usuarios = await dbAPI.getUsuarios();
+        const updatedUser = usuarios.find(u => u.id === currentUser.id);
+        if (updatedUser) {
+          setCurrentUser(updatedUser);
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        }
+      } catch (error) {
+        console.error("Error al actualizar información del usuario:", error);
+      }
+    }
+  };
+  
   return (
     <AuthContext.Provider
       value={{
@@ -81,7 +98,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!currentUser,
         login,
         logout,
-        isAdmin: currentUser?.rol === "admin"
+        isAdmin: currentUser?.rol === "admin",
+        subalmacenId: currentUser?.subalmacenId,
+        refreshUser
       }}
     >
       {children}

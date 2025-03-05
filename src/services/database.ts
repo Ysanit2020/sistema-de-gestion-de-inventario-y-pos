@@ -1,4 +1,3 @@
-
 import Dexie from "dexie";
 
 // Definición de la base de datos
@@ -6,21 +5,30 @@ export class AppDatabase extends Dexie {
   productos: Dexie.Table<ProductoInterface, number>;
   ventas: Dexie.Table<VentaInterface, number>;
   usuarios: Dexie.Table<UsuarioInterface, number>;
+  subalmacenes: Dexie.Table<SubalmacenInterface, number>;
+  inventarioSubalmacen: Dexie.Table<InventarioSubalmacenInterface, number>;
+  configuracion: Dexie.Table<ConfiguracionInterface, number>;
 
   constructor() {
     super("gestorDB");
     
     // Definir esquemas de tablas
-    this.version(1).stores({
+    this.version(2).stores({
       productos: "++id, codigo, nombre, categoria, precio",
       ventas: "++id, fecha",
-      usuarios: "++id, usuario, password, rol"
+      usuarios: "++id, usuario, password, rol",
+      subalmacenes: "++id, nombre",
+      inventarioSubalmacen: "++id, productoId, subalmacenId, stock",
+      configuracion: "++id, clave, valor"
     });
     
     // Typed tables
     this.productos = this.table("productos");
     this.ventas = this.table("ventas");
     this.usuarios = this.table("usuarios");
+    this.subalmacenes = this.table("subalmacenes");
+    this.inventarioSubalmacen = this.table("inventarioSubalmacen");
+    this.configuracion = this.table("configuracion");
   }
 }
 
@@ -44,6 +52,7 @@ export interface ItemVentaInterface {
   precio: number;
   cantidad: number;
   stock: number;
+  subalmacenId?: number;
 }
 
 export interface VentaInterface {
@@ -53,6 +62,8 @@ export interface VentaInterface {
   total: number;
   pagoCon?: number;
   cambio?: number;
+  subalmacenId?: number;
+  vendedorId?: number;
 }
 
 export interface UsuarioInterface {
@@ -61,6 +72,27 @@ export interface UsuarioInterface {
   password: string;
   rol: "admin" | "trabajador";
   nombre?: string;
+  subalmacenId?: number;
+}
+
+export interface SubalmacenInterface {
+  id?: number;
+  nombre: string;
+  direccion?: string;
+  descripcion?: string;
+}
+
+export interface InventarioSubalmacenInterface {
+  id?: number;
+  productoId: number;
+  subalmacenId: number;
+  stock: number;
+}
+
+export interface ConfiguracionInterface {
+  id?: number;
+  clave: string;
+  valor: string;
 }
 
 // Instancia de la base de datos
@@ -146,5 +178,60 @@ export const inicializarDatos = async () => {
         nombre: "Vendedor"
       }
     ]);
+  }
+  
+  // Verificar si ya existen subalmacenes
+  const countSubalmacenes = await db.subalmacenes.count();
+  
+  if (countSubalmacenes === 0) {
+    // Agregar subalmacén principal por defecto
+    const idAlmacenPrincipal = await db.subalmacenes.add({
+      nombre: "Almacén Principal",
+      descripcion: "Almacén central de todos los productos"
+    });
+    
+    // Agregar subalmacén para vendedores por defecto
+    const idAlmacenVendedor = await db.subalmacenes.add({
+      nombre: "Punto de Venta",
+      descripcion: "Productos disponibles para venta directa"
+    });
+    
+    // Si hay productos, inicializar su inventario en el almacén principal
+    if (countProductos > 0) {
+      const productos = await db.productos.toArray();
+      
+      for (const producto of productos) {
+        await db.inventarioSubalmacen.add({
+          productoId: producto.id!,
+          subalmacenId: idAlmacenPrincipal,
+          stock: producto.stock
+        });
+        
+        // Inicializar con algunos productos en el almacén de venta
+        await db.inventarioSubalmacen.add({
+          productoId: producto.id!,
+          subalmacenId: idAlmacenVendedor,
+          stock: Math.floor(producto.stock / 2) // La mitad del stock principal
+        });
+      }
+    }
+    
+    // Asignar subalmacén al vendedor
+    const vendedor = await db.usuarios.where("usuario").equals("vendedor").first();
+    if (vendedor) {
+      await db.usuarios.update(vendedor.id!, {
+        ...vendedor,
+        subalmacenId: idAlmacenVendedor
+      });
+    }
+  }
+  
+  // Verificar configuración
+  const themeConfig = await db.configuracion.where("clave").equals("theme").first();
+  if (!themeConfig) {
+    await db.configuracion.add({
+      clave: "theme",
+      valor: "light"
+    });
   }
 };

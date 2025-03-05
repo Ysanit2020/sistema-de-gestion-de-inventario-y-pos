@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -16,16 +15,38 @@ const Ventas = () => {
   const [cambio, setCambio] = useState(0);
   const [mostrarCambio, setMostrarCambio] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth();
-
+  const { currentUser, subalmacenId } = useAuth();
+  
   useEffect(() => {
     cargarProductos();
-  }, []);
+  }, [subalmacenId]);
 
   const cargarProductos = async () => {
     try {
-      const productosGuardados = await db.productos.toArray();
-      setProductos(productosGuardados);
+      if (subalmacenId) {
+        const inventario = await db.inventarioSubalmacen
+          .where('subalmacenId')
+          .equals(subalmacenId)
+          .toArray();
+        
+        const productosConStock = [];
+        for (const item of inventario) {
+          if (item.stock > 0) {
+            const producto = await db.productos.get(item.productoId);
+            if (producto) {
+              productosConStock.push({
+                ...producto,
+                stock: item.stock
+              });
+            }
+          }
+        }
+        
+        setProductos(productosConStock);
+      } else {
+        const productosGuardados = await db.productos.toArray();
+        setProductos(productosGuardados);
+      }
     } catch (error) {
       console.error("Error al cargar productos:", error);
       toast({
@@ -40,6 +61,15 @@ const Ventas = () => {
     const itemExistente = carrito.find(item => item.id === producto.id);
     
     if (itemExistente) {
+      if (itemExistente.cantidad + 1 > producto.stock) {
+        toast({
+          title: "Stock insuficiente",
+          description: `Solo hay ${producto.stock} unidades disponibles de este producto`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const nuevoCarrito = carrito.map(item => 
         item.id === producto.id 
           ? { ...item, cantidad: item.cantidad + 1 } 
@@ -47,10 +77,13 @@ const Ventas = () => {
       );
       setCarrito(nuevoCarrito);
     } else {
-      setCarrito([...carrito, { ...producto, cantidad: 1 }]);
+      setCarrito([...carrito, { 
+        ...producto, 
+        cantidad: 1,
+        subalmacenId: subalmacenId
+      }]);
     }
     
-    // Resetear cálculo de cambio cuando cambia el carrito
     setPagoCon("");
     setCambio(0);
     setMostrarCambio(false);
@@ -65,6 +98,19 @@ const Ventas = () => {
     const nuevoCarrito = carrito.map(item => {
       if (item.id === id) {
         const nuevaCantidad = item.cantidad + cambio;
+        
+        if (cambio > 0) {
+          const producto = productos.find(p => p.id === id);
+          if (producto && nuevaCantidad > producto.stock) {
+            toast({
+              title: "Stock insuficiente",
+              description: `Solo hay ${producto.stock} unidades disponibles de este producto`,
+              variant: "destructive"
+            });
+            return item;
+          }
+        }
+        
         return nuevaCantidad > 0 ? { ...item, cantidad: nuevaCantidad } : null;
       }
       return item;
@@ -72,7 +118,6 @@ const Ventas = () => {
     
     setCarrito(nuevoCarrito);
     
-    // Resetear cálculo de cambio cuando cambia el carrito
     setPagoCon("");
     setCambio(0);
     setMostrarCambio(false);
@@ -81,7 +126,6 @@ const Ventas = () => {
   const eliminarDelCarrito = (id) => {
     setCarrito(carrito.filter(item => item.id !== id));
     
-    // Resetear cálculo de cambio cuando cambia el carrito
     setPagoCon("");
     setCambio(0);
     setMostrarCambio(false);
@@ -112,15 +156,35 @@ const Ventas = () => {
   const buscarProducto = async (e) => {
     if (e.key === 'Enter' && busqueda) {
       try {
-        // Buscar por código de barras
         const producto = await db.productos
           .where('codigo')
           .equals(busqueda)
           .first();
         
         if (producto) {
-          agregarAlCarrito(producto);
-          setBusqueda("");
+          if (subalmacenId) {
+            const inventario = await db.inventarioSubalmacen
+              .where('[productoId+subalmacenId]')
+              .equals([producto.id, subalmacenId])
+              .first();
+            
+            if (inventario && inventario.stock > 0) {
+              agregarAlCarrito({
+                ...producto,
+                stock: inventario.stock
+              });
+              setBusqueda("");
+            } else {
+              toast({
+                title: "Sin stock",
+                description: "Este producto no tiene stock disponible en tu punto de venta",
+                variant: "destructive"
+              });
+            }
+          } else {
+            agregarAlCarrito(producto);
+            setBusqueda("");
+          }
         } else {
           toast({
             title: "No encontrado",
@@ -145,7 +209,6 @@ const Ventas = () => {
     }
 
     try {
-      // Verificar si se calculó el cambio
       if (!mostrarCambio) {
         toast({
           title: "Calcule el cambio",
@@ -155,23 +218,35 @@ const Ventas = () => {
         return;
       }
       
-      // Crear nueva venta
       const nuevaVenta = {
         fecha: new Date(),
         productos: carrito,
         total: totalVenta,
         pagoCon: parseFloat(pagoCon),
-        cambio: cambio
+        cambio: cambio,
+        subalmacenId: subalmacenId,
+        vendedorId: currentUser?.id
       };
       
-      // Guardar venta en la base de datos
       const ventaId = await db.ventas.add(nuevaVenta);
       
-      // Actualizar inventario
       for (const item of carrito) {
-        await db.productos.update(item.id, {
-          stock: item.stock - item.cantidad
-        });
+        if (subalmacenId) {
+          const inventario = await db.inventarioSubalmacen
+            .where('[productoId+subalmacenId]')
+            .equals([item.id, subalmacenId])
+            .first();
+          
+          if (inventario) {
+            await db.inventarioSubalmacen.update(inventario.id, {
+              stock: inventario.stock - item.cantidad
+            });
+          }
+        } else {
+          await db.productos.update(item.id, {
+            stock: item.stock - item.cantidad
+          });
+        }
       }
       
       toast({
@@ -179,15 +254,12 @@ const Ventas = () => {
         description: `Venta #${ventaId} registrada correctamente`,
       });
       
-      // Limpiar carrito y resetear
       setCarrito([]);
       setPagoCon("");
       setCambio(0);
       setMostrarCambio(false);
       
-      // Recargar productos para actualizar stock
       cargarProductos();
-      
     } catch (error) {
       console.error("Error al procesar venta:", error);
       toast({
@@ -215,7 +287,6 @@ const Ventas = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Búsqueda y lista de productos */}
         <div className="lg:col-span-2">
           <Card className="mb-6 p-4">
             <div className="relative">
@@ -257,7 +328,6 @@ const Ventas = () => {
           </div>
         </div>
 
-        {/* Carrito de compras */}
         <div>
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
