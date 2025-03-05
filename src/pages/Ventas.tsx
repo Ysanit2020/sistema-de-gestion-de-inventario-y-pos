@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, DollarSign } from "lucide-react";
 import { db } from "@/services/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { dbAPI } from "@/services/database-electron";
 
 const Ventas = () => {
   const [productos, setProductos] = useState([]);
@@ -24,28 +25,16 @@ const Ventas = () => {
   const cargarProductos = async () => {
     try {
       if (subalmacenId) {
-        const inventario = await db.inventarioSubalmacen
-          .where('subalmacenId')
-          .equals(subalmacenId)
-          .toArray();
+        // Si el usuario tiene un subalmacén asignado, cargar solo los productos de ese subalmacén
+        const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
         
-        const productosConStock = [];
-        for (const item of inventario) {
-          if (item.stock > 0) {
-            const producto = await db.productos.get(item.productoId);
-            if (producto) {
-              productosConStock.push({
-                ...producto,
-                stock: item.stock
-              });
-            }
-          }
-        }
-        
+        // Filtrar productos que tienen stock
+        const productosConStock = inventario.filter(item => item.stock > 0);
         setProductos(productosConStock);
       } else {
-        const productosGuardados = await db.productos.toArray();
-        setProductos(productosGuardados);
+        // Fallback para usuarios sin subalmacén asignado
+        const productosGuardados = await dbAPI.getProductos();
+        setProductos(productosGuardados.filter(producto => producto.stock > 0));
       }
     } catch (error) {
       console.error("Error al cargar productos:", error);
@@ -230,19 +219,27 @@ const Ventas = () => {
       
       const ventaId = await db.ventas.add(nuevaVenta);
       
+      // Actualizar inventario
       for (const item of carrito) {
         if (subalmacenId) {
-          const inventario = await db.inventarioSubalmacen
-            .where('[productoId+subalmacenId]')
-            .equals([item.id, subalmacenId])
-            .first();
-          
-          if (inventario) {
-            await db.inventarioSubalmacen.update(inventario.id, {
-              stock: inventario.stock - item.cantidad
+          try {
+            // Actualizar el stock en el subalmacén
+            await dbAPI.transferirProducto(
+              item.id,
+              item.cantidad,
+              subalmacenId,
+              0 // 0 representa una venta (no se transfiere a otro almacén)
+            );
+          } catch (err) {
+            console.error("Error al actualizar inventario:", err);
+            toast({
+              title: "Error de inventario",
+              description: "No se pudo actualizar el inventario correctamente",
+              variant: "destructive"
             });
           }
         } else {
+          // Fallback para sistema sin subalmacenes
           await db.productos.update(item.id, {
             stock: item.stock - item.cantidad
           });

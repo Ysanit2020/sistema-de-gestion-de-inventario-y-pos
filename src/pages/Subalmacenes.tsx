@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Warehouse, Save, Plus, Minus, Trash2, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Warehouse, Save, Plus, Minus, Trash2, ArrowRightLeft, Pencil } from "lucide-react";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +50,6 @@ const Subalmacenes = () => {
       const productosData = await dbAPI.getProductos();
       setProductos(productosData);
       
-      // Si hay subalmacenes, seleccionar el primero por defecto
       if (subalmacenesData.length > 0 && !origenId) {
         setOrigenId(subalmacenesData[0].id!);
         if (subalmacenesData.length > 1) {
@@ -229,7 +227,6 @@ const Subalmacenes = () => {
           description: "Los productos han sido transferidos correctamente",
         });
         
-        // Resetear transferencias y recargar datos
         setTransferencias({});
         cargarInventarioSubalmacen(origenId);
       } else {
@@ -342,7 +339,7 @@ const Subalmacenes = () => {
                             className="p-1"
                             onClick={() => seleccionarSubalmacenParaEditar(subalmacen)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="ghost" 

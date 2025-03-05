@@ -1,4 +1,3 @@
-
 // Interfaces
 export interface ProductoInterface {
   id?: number;
@@ -185,7 +184,34 @@ export const dbAPI = {
       return window.electronAPI.getInventarioSubalmacen(subalmacenId);
     } else {
       console.warn("Electron no disponible, usando datos de ejemplo");
-      return [];
+      
+      // Para desarrollo sin Electron, simular inventario de subalmacén
+      try {
+        // Obtener lista de productos
+        const productos = await db.productos.toArray();
+        
+        // Obtener inventario de este subalmacén
+        const inventario = await db.inventarioSubalmacen
+          .where('subalmacenId')
+          .equals(subalmacenId)
+          .toArray();
+        
+        // Combinar datos para devolver productos completos con su stock
+        return inventario.map(item => {
+          const producto = productos.find(p => p.id === item.productoId);
+          if (producto) {
+            return {
+              ...producto,
+              stock: item.stock,
+              productoId: producto.id
+            };
+          }
+          return null;
+        }).filter(Boolean);
+      } catch (error) {
+        console.error("Error al obtener inventario:", error);
+        return [];
+      }
     }
   },
   
@@ -193,8 +219,53 @@ export const dbAPI = {
     if (isElectron()) {
       return window.electronAPI.transferirProducto(productoId, cantidad, origenId, destinoId);
     } else {
-      console.warn("Electron no disponible");
-      return true;
+      console.warn("Electron no disponible, simulando transferencia");
+      
+      try {
+        // Verificar stock en el origen
+        const inventarioOrigen = await db.inventarioSubalmacen
+          .where('[productoId+subalmacenId]')
+          .equals([productoId, origenId])
+          .first();
+        
+        if (!inventarioOrigen || inventarioOrigen.stock < cantidad) {
+          console.error("Stock insuficiente para transferir");
+          return false;
+        }
+        
+        // Actualizar stock en origen (siempre necesario)
+        await db.inventarioSubalmacen.update(inventarioOrigen.id, {
+          stock: inventarioOrigen.stock - cantidad
+        });
+        
+        // Si destinoId es 0, esto significa una venta y no necesitamos transferir
+        if (destinoId > 0) {
+          // Buscar si ya existe el producto en el destino
+          const inventarioDestino = await db.inventarioSubalmacen
+            .where('[productoId+subalmacenId]')
+            .equals([productoId, destinoId])
+            .first();
+          
+          if (inventarioDestino) {
+            // Actualizar stock existente
+            await db.inventarioSubalmacen.update(inventarioDestino.id, {
+              stock: inventarioDestino.stock + cantidad
+            });
+          } else {
+            // Crear nuevo registro de inventario
+            await db.inventarioSubalmacen.add({
+              productoId,
+              subalmacenId: destinoId,
+              stock: cantidad
+            });
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Error en transferencia:", error);
+        return false;
+      }
     }
   },
   
