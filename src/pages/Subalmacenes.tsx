@@ -7,7 +7,6 @@ import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { dbAPI, SubalmacenInterface, ProductoInterface } from "@/services/database-electron";
-import { db } from "@/services/database";
 
 const Subalmacenes = () => {
   const { isAdmin } = useAuth();
@@ -29,6 +28,7 @@ const Subalmacenes = () => {
   const [destinoId, setDestinoId] = useState<number | null>(null);
   
   const [transferencias, setTransferencias] = useState<{[key: number]: number}>({});
+  const [cargando, setCargando] = useState<boolean>(false);
   
   useEffect(() => {
     if (!isAdmin) {
@@ -41,11 +41,15 @@ const Subalmacenes = () => {
       return;
     }
     
+    // Cargar datos solo una vez al montar el componente
     cargarDatos();
+    
+    // No se implementa ningún intervalo de actualización automática
   }, [isAdmin, navigate, toast]);
   
   const cargarDatos = async () => {
     try {
+      setCargando(true);
       const subalmacenesData = await dbAPI.getSubalmacenes();
       console.log("Subalmacenes cargados:", subalmacenesData);
       setSubalmacenes(subalmacenesData);
@@ -60,7 +64,9 @@ const Subalmacenes = () => {
           setDestinoId(subalmacenesData[1].id!);
         }
       }
+      setCargando(false);
     } catch (error) {
+      setCargando(false);
       console.error("Error al cargar datos:", error);
       toast({
         title: "Error",
@@ -74,6 +80,7 @@ const Subalmacenes = () => {
     if (!subalmacenId) return;
     
     try {
+      setCargando(true);
       console.log("Cargando inventario del subalmacén:", subalmacenId);
       const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
       console.log("Inventario cargado:", inventario);
@@ -81,7 +88,9 @@ const Subalmacenes = () => {
       
       // Reiniciar las transferencias al cambiar el subalmacén
       setTransferencias({});
+      setCargando(false);
     } catch (error) {
+      setCargando(false);
       console.error("Error al cargar inventario:", error);
       toast({
         title: "Error",
@@ -134,6 +143,7 @@ const Subalmacenes = () => {
     }
     
     try {
+      setCargando(true);
       const resultado = await dbAPI.saveSubalmacen({
         ...nuevoSubalmacen,
         id: editandoSubalmacen ? subalmacenSeleccionado! : undefined
@@ -145,8 +155,10 @@ const Subalmacenes = () => {
       });
       
       resetSubalmacenForm();
-      cargarDatos();
+      await cargarDatos();
+      setCargando(false);
     } catch (error) {
+      setCargando(false);
       console.error("Error al guardar subalmacén:", error);
       toast({
         title: "Error",
@@ -158,13 +170,16 @@ const Subalmacenes = () => {
   
   const eliminarSubalmacen = async (id: number) => {
     try {
+      setCargando(true);
       await dbAPI.deleteSubalmacen(id);
       toast({
         title: "Subalmacén eliminado",
         description: "Subalmacén eliminado correctamente",
       });
-      cargarDatos();
+      await cargarDatos();
+      setCargando(false);
     } catch (error) {
+      setCargando(false);
       console.error("Error al eliminar subalmacén:", error);
       toast({
         title: "Error",
@@ -217,6 +232,7 @@ const Subalmacenes = () => {
     }
     
     try {
+      setCargando(true);
       let exito = true;
       let errorMessage = "";
       console.log("Iniciando transferencias:", transferenciasValidas);
@@ -224,19 +240,26 @@ const Subalmacenes = () => {
       for (const { productoId, cantidad } of transferenciasValidas) {
         console.log("Transferir:", { productoId, cantidad, origenId, destinoId });
         
-        const resultado = await dbAPI.transferirProducto(
-          productoId,
-          cantidad,
-          origenId,
-          destinoId
-        );
-        
-        console.log("Resultado transferencia:", resultado);
-        
-        if (!resultado) {
+        try {
+          const resultado = await dbAPI.transferirProducto(
+            productoId,
+            cantidad,
+            origenId,
+            destinoId
+          );
+          
+          console.log("Resultado transferencia:", resultado);
+          
+          if (!resultado) {
+            exito = false;
+            errorMessage = `Error al transferir producto ID: ${productoId}`;
+            console.error(errorMessage);
+            break;
+          }
+        } catch (transferError) {
+          console.error("Error en transferencia:", transferError);
           exito = false;
-          errorMessage = `Error al transferir producto ID: ${productoId}`;
-          console.error(errorMessage);
+          errorMessage = `Error al transferir producto ID: ${productoId} - ${transferError?.message || ""}`;
           break;
         }
       }
@@ -248,7 +271,7 @@ const Subalmacenes = () => {
         });
         
         setTransferencias({});
-        cargarInventarioSubalmacen(origenId);
+        await cargarInventarioSubalmacen(origenId);
       } else {
         toast({
           title: "Error",
@@ -256,7 +279,9 @@ const Subalmacenes = () => {
           variant: "destructive"
         });
       }
+      setCargando(false);
     } catch (error) {
+      setCargando(false);
       console.error("Error al transferir productos:", error);
       toast({
         title: "Error",
@@ -265,16 +290,29 @@ const Subalmacenes = () => {
       });
     }
   };
+
+  // Función para recargar manualmente
+  const recargarDatos = () => {
+    cargarDatos();
+    if (origenId) {
+      cargarInventarioSubalmacen(origenId);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="flex items-center mb-6">
-        <Link to="/dashboard">
-          <Button variant="ghost" className="mr-2 p-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-display font-bold">Gestión de Subalmacenes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Link to="/dashboard">
+            <Button variant="ghost" className="mr-2 p-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-display font-bold">Gestión de Subalmacenes</h1>
+        </div>
+        <Button onClick={recargarDatos} disabled={cargando}>
+          {cargando ? "Cargando..." : "Actualizar datos"}
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -319,13 +357,13 @@ const Subalmacenes = () => {
             </div>
             
             <div className="flex gap-3 pt-2">
-              <Button onClick={guardarSubalmacen}>
+              <Button onClick={guardarSubalmacen} disabled={cargando}>
                 <Save className="mr-2 h-4 w-4" />
                 {editandoSubalmacen ? "Actualizar" : "Guardar"} subalmacén
               </Button>
               
               {editandoSubalmacen && (
-                <Button variant="outline" onClick={resetSubalmacenForm}>
+                <Button variant="outline" onClick={resetSubalmacenForm} disabled={cargando}>
                   Cancelar
                 </Button>
               )}
@@ -336,53 +374,59 @@ const Subalmacenes = () => {
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Subalmacenes registrados</h2>
           
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-muted">
-                  <th className="py-2 px-3 text-left">Nombre</th>
-                  <th className="py-2 px-3 text-left">Dirección</th>
-                  <th className="py-2 px-3 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subalmacenes.length > 0 ? (
-                  subalmacenes.map(subalmacen => (
-                    <tr key={subalmacen.id} className="border-b hover:bg-muted/50">
-                      <td className="py-2 px-3">{subalmacen.nombre}</td>
-                      <td className="py-2 px-3">{subalmacen.direccion || '-'}</td>
-                      <td className="py-2 px-3">
-                        <div className="flex justify-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-1"
-                            onClick={() => seleccionarSubalmacenParaEditar(subalmacen)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-1 text-destructive hover:text-destructive"
-                            onClick={() => subalmacen.id && eliminarSubalmacen(subalmacen.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+          {cargando ? (
+            <div className="py-4 text-center">Cargando...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="py-2 px-3 text-left">Nombre</th>
+                    <th className="py-2 px-3 text-left">Dirección</th>
+                    <th className="py-2 px-3 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subalmacenes.length > 0 ? (
+                    subalmacenes.map(subalmacen => (
+                      <tr key={subalmacen.id} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-3">{subalmacen.nombre}</td>
+                        <td className="py-2 px-3">{subalmacen.direccion || '-'}</td>
+                        <td className="py-2 px-3">
+                          <div className="flex justify-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-1"
+                              onClick={() => seleccionarSubalmacenParaEditar(subalmacen)}
+                              disabled={cargando}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-1 text-destructive hover:text-destructive"
+                              onClick={() => subalmacen.id && eliminarSubalmacen(subalmacen.id)}
+                              disabled={cargando}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="py-4 text-center text-muted-foreground">
+                        No hay subalmacenes registrados
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={3} className="py-4 text-center text-muted-foreground">
-                      No hay subalmacenes registrados
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
       
@@ -396,6 +440,7 @@ const Subalmacenes = () => {
               value={origenId || ""}
               onChange={(e) => setOrigenId(Number(e.target.value))}
               className="w-full p-2 border rounded-md"
+              disabled={cargando}
             >
               <option value="">Seleccionar subalmacén</option>
               {subalmacenes.map(subalmacen => (
@@ -412,6 +457,7 @@ const Subalmacenes = () => {
               value={destinoId || ""}
               onChange={(e) => setDestinoId(Number(e.target.value))}
               className="w-full p-2 border rounded-md"
+              disabled={cargando}
             >
               <option value="">Seleccionar subalmacén</option>
               {subalmacenes.map(subalmacen => (
@@ -423,81 +469,85 @@ const Subalmacenes = () => {
           </div>
         </div>
         
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-muted">
-                <th className="py-2 px-3 text-left">Producto</th>
-                <th className="py-2 px-3 text-right">Disponible</th>
-                <th className="py-2 px-3 text-center">Cantidad a transferir</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inventarioSubalmacen.length > 0 ? (
-                inventarioSubalmacen.map(item => (
-                  <tr key={item.productoId} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-3">
-                      <div>
-                        <div className="font-medium">{item.nombre}</div>
-                        <div className="text-sm text-muted-foreground">Código: {item.codigo}</div>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3 text-right">{item.stock}</td>
-                    <td className="py-2 px-3">
-                      <div className="flex items-center justify-center">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            const currentValue = transferencias[item.productoId] || 0;
-                            if (currentValue > 0) {
-                              handleTransferirChange(item.productoId, currentValue - 1);
-                            }
-                          }}
-                          disabled={(transferencias[item.productoId] || 0) <= 0}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="mx-2 min-w-[40px] text-center">
-                          {transferencias[item.productoId] || 0}
-                        </span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            const currentValue = transferencias[item.productoId] || 0;
-                            if (currentValue < item.stock) {
-                              handleTransferirChange(item.productoId, currentValue + 1);
-                            }
-                          }}
-                          disabled={(transferencias[item.productoId] || 0) >= item.stock}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
+        {cargando ? (
+          <div className="py-4 text-center">Cargando...</div>
+        ) : (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="py-2 px-3 text-left">Producto</th>
+                  <th className="py-2 px-3 text-right">Disponible</th>
+                  <th className="py-2 px-3 text-center">Cantidad a transferir</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventarioSubalmacen.length > 0 ? (
+                  inventarioSubalmacen.map(item => (
+                    <tr key={item.productoId} className="border-b hover:bg-muted/50">
+                      <td className="py-2 px-3">
+                        <div>
+                          <div className="font-medium">{item.nombre}</div>
+                          <div className="text-sm text-muted-foreground">Código: {item.codigo}</div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-right">{item.stock}</td>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center justify-center">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const currentValue = transferencias[item.productoId] || 0;
+                              if (currentValue > 0) {
+                                handleTransferirChange(item.productoId, currentValue - 1);
+                              }
+                            }}
+                            disabled={(transferencias[item.productoId] || 0) <= 0 || cargando}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="mx-2 min-w-[40px] text-center">
+                            {transferencias[item.productoId] || 0}
+                          </span>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const currentValue = transferencias[item.productoId] || 0;
+                              if (currentValue < item.stock) {
+                                handleTransferirChange(item.productoId, currentValue + 1);
+                              }
+                            }}
+                            disabled={(transferencias[item.productoId] || 0) >= item.stock || cargando}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="py-4 text-center text-muted-foreground">
+                      {origenId ? "No hay productos en este subalmacén" : "Selecciona un subalmacén de origen"}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="py-4 text-center text-muted-foreground">
-                    {origenId ? "No hay productos en este subalmacén" : "Selecciona un subalmacén de origen"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
         
         <div className="flex justify-end">
           <Button
             onClick={transferirProductos}
-            disabled={!origenId || !destinoId || origenId === destinoId || Object.keys(transferencias).length === 0}
+            disabled={!origenId || !destinoId || origenId === destinoId || Object.keys(transferencias).length === 0 || cargando}
           >
             <ArrowRightLeft className="mr-2 h-4 w-4" />
-            Transferir productos
+            {cargando ? "Procesando..." : "Transferir productos"}
           </Button>
         </div>
       </Card>

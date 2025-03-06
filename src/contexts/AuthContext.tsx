@@ -103,9 +103,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ? Number(currentUser.subalmacenId) 
     : undefined;
   
-  console.log("AuthContext - currentUser:", currentUser);
-  console.log("AuthContext - subalmacenId:", subalmacenId);
-  
   return (
     <AuthContext.Provider
       value={{
