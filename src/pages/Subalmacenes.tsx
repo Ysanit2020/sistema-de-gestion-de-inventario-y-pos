@@ -71,11 +71,16 @@ const Subalmacenes = () => {
   };
   
   const cargarInventarioSubalmacen = async (subalmacenId: number) => {
+    if (!subalmacenId) return;
+    
     try {
       console.log("Cargando inventario del subalmacén:", subalmacenId);
       const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
       console.log("Inventario cargado:", inventario);
       setInventarioSubalmacen(inventario);
+      
+      // Reiniciar las transferencias al cambiar el subalmacén
+      setTransferencias({});
     } catch (error) {
       console.error("Error al cargar inventario:", error);
       toast({
@@ -213,6 +218,7 @@ const Subalmacenes = () => {
     
     try {
       let exito = true;
+      let errorMessage = "";
       console.log("Iniciando transferencias:", transferenciasValidas);
       
       for (const { productoId, cantidad } of transferenciasValidas) {
@@ -229,7 +235,9 @@ const Subalmacenes = () => {
         
         if (!resultado) {
           exito = false;
-          console.error("Error en transferencia de producto ID:", productoId);
+          errorMessage = `Error al transferir producto ID: ${productoId}`;
+          console.error(errorMessage);
+          break;
         }
       }
       
@@ -244,7 +252,7 @@ const Subalmacenes = () => {
       } else {
         toast({
           title: "Error",
-          description: "Hubo un problema con algunas transferencias",
+          description: errorMessage || "Hubo un problema con algunas transferencias",
           variant: "destructive"
         });
       }

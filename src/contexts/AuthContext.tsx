@@ -25,7 +25,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Verificar si hay una sesión guardada en localStorage
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setCurrentUser(parsedUser);
+      } catch (error) {
+        console.error("Error parsing saved user:", error);
+        localStorage.removeItem("currentUser");
+      }
     }
     setIsLoading(false);
   }, []);
@@ -36,6 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const user = await dbAPI.login(username, password);
       
       if (user) {
+        console.log("Usuario autenticado:", user);
         setCurrentUser(user);
         localStorage.setItem("currentUser", JSON.stringify(user));
         
@@ -81,6 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const usuarios = await dbAPI.getUsuarios();
         const updatedUser = usuarios.find(u => u.id === currentUser.id);
         if (updatedUser) {
+          console.log("Usuario actualizado:", updatedUser);
           setCurrentUser(updatedUser);
           localStorage.setItem("currentUser", JSON.stringify(updatedUser));
         }

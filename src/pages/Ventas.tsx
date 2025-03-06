@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -24,14 +23,8 @@ const Ventas = () => {
   const { currentUser, subalmacenId } = useAuth();
   
   useEffect(() => {
-    if (!subalmacenId) {
-      toast({
-        title: "Error",
-        description: "No tienes un punto de venta asignado",
-        variant: "destructive"
-      });
-      return;
-    }
+    console.log("Punto de venta - Usuario actual:", currentUser);
+    console.log("Punto de venta - SubalmacenId:", subalmacenId);
     
     cargarProductos();
   }, [subalmacenId]);
@@ -44,14 +37,14 @@ const Ventas = () => {
         const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
         
         // Filtrar productos con stock mayor a 0
-        const productosConStock = inventario.filter(item => item.stock > 0);
+        const productosConStock = inventario.filter((item: any) => item.stock > 0);
         console.log("Productos con stock en subalmacén:", productosConStock);
         setProductos(productosConStock);
       } else {
         console.log("Usuario sin subalmacén asignado");
         toast({
           title: "Sin punto de venta",
-          description: "No tienes un punto de venta asignado",
+          description: "No tienes un punto de venta asignado. Contacta al administrador.",
           variant: "destructive"
         });
         setProductos([]);
@@ -169,35 +162,39 @@ const Ventas = () => {
   const buscarProducto = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && busqueda) {
       try {
+        if (!subalmacenId) {
+          toast({
+            title: "Sin punto de venta",
+            description: "No tienes un punto de venta asignado",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         const producto = await db.productos
           .where('codigo')
           .equals(busqueda)
           .first();
         
         if (producto) {
-          if (subalmacenId) {
-            const inventario = await db.inventarioSubalmacen
-              .where('[productoId+subalmacenId]')
-              .equals([producto.id, subalmacenId])
-              .first();
-            
-            if (inventario && inventario.stock > 0) {
-              agregarAlCarrito({
-                ...producto,
-                productoId: producto.id,
-                stock: inventario.stock
-              });
-              setBusqueda("");
-            } else {
-              toast({
-                title: "Sin stock",
-                description: "Este producto no tiene stock disponible en tu punto de venta",
-                variant: "destructive"
-              });
-            }
-          } else {
-            agregarAlCarrito(producto);
+          const inventario = await db.inventarioSubalmacen
+            .where('[productoId+subalmacenId]')
+            .equals([producto.id, subalmacenId])
+            .first();
+          
+          if (inventario && inventario.stock > 0) {
+            agregarAlCarrito({
+              ...producto,
+              productoId: producto.id,
+              stock: inventario.stock
+            });
             setBusqueda("");
+          } else {
+            toast({
+              title: "Sin stock",
+              description: "Este producto no tiene stock disponible en tu punto de venta",
+              variant: "destructive"
+            });
           }
         } else {
           toast({
@@ -213,6 +210,15 @@ const Ventas = () => {
   };
 
   const procesarVenta = async () => {
+    if (!subalmacenId) {
+      toast({
+        title: "Sin punto de venta",
+        description: "No tienes un punto de venta asignado",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (carrito.length === 0) {
       toast({
         title: "Carrito vacío",
@@ -248,39 +254,27 @@ const Ventas = () => {
       let todoCorrecto = true;
       
       for (const item of carrito) {
-        if (subalmacenId) {
-          try {
-            console.log("Transferir producto de venta:", {
-              id: item.id,
-              cantidad: item.cantidad,
-              origen: subalmacenId
-            });
-            
-            const transferido = await dbAPI.transferirProducto(
-              item.id,
-              item.cantidad,
-              subalmacenId,
-              0 // 0 indica que es una venta
-            );
-            
-            if (!transferido) {
-              todoCorrecto = false;
-              console.error("Error al transferir producto:", item);
-            }
-          } catch (err) {
-            console.error("Error al actualizar inventario:", err);
+        try {
+          console.log("Transferir producto de venta:", {
+            id: item.id,
+            cantidad: item.cantidad,
+            origen: subalmacenId
+          });
+          
+          const transferido = await dbAPI.transferirProducto(
+            item.id,
+            item.cantidad,
+            subalmacenId,
+            0 // 0 indica que es una venta
+          );
+          
+          if (!transferido) {
             todoCorrecto = false;
+            console.error("Error al transferir producto:", item);
           }
-        } else {
-          // Si no hay subalmacén, actualizar el stock general
-          try {
-            await db.productos.update(item.id, {
-              stock: item.stock - item.cantidad
-            });
-          } catch (err) {
-            console.error("Error al actualizar stock:", err);
-            todoCorrecto = false;
-          }
+        } catch (err) {
+          console.error("Error al actualizar inventario:", err);
+          todoCorrecto = false;
         }
       }
       

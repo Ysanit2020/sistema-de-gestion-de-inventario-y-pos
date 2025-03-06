@@ -107,12 +107,21 @@ export const dbAPI = {
           return producto;
         } else {
           // Nuevo producto
-          const id = await db.productos.add(producto);
+          const id = await db.productos.add({
+            ...producto,
+            id: undefined // Asegurarse de que no enviamos un ID para que Dexie lo genere
+          });
           
           // Agregar el stock inicial al almacén principal (primer subalmacén)
           const subalmacenes = await db.subalmacenes.toArray();
           if (subalmacenes.length > 0) {
             const almacenPrincipal = subalmacenes[0];
+            console.log("Agregando stock inicial al almacén principal:", {
+              productoId: id,
+              subalmacenId: almacenPrincipal.id,
+              stock: producto.stock
+            });
+            
             await db.inventarioSubalmacen.add({
               productoId: id,
               subalmacenId: almacenPrincipal.id!,
@@ -290,6 +299,7 @@ export const dbAPI = {
       
       // Para desarrollo sin Electron, simular inventario de subalmacén
       try {
+        console.log("Buscando inventario para subalmacén ID:", subalmacenId);
         // Obtener lista de productos
         const productos = await db.productos.toArray();
         
@@ -299,8 +309,10 @@ export const dbAPI = {
           .equals(subalmacenId)
           .toArray();
         
+        console.log("Inventario raw encontrado:", inventario);
+        
         // Combinar datos para devolver productos completos con su stock
-        return inventario.map(item => {
+        const resultado = inventario.map(item => {
           const producto = productos.find(p => p.id === item.productoId);
           if (producto) {
             return {
@@ -311,6 +323,9 @@ export const dbAPI = {
           }
           return null;
         }).filter(Boolean);
+        
+        console.log("Inventario procesado:", resultado);
+        return resultado;
       } catch (error) {
         console.error("Error al obtener inventario:", error);
         return [];
@@ -328,11 +343,17 @@ export const dbAPI = {
         console.log("Transferir:", { productoId, cantidad, origenId, destinoId });
         
         // Verificar stock en el origen
-        const inventarioOrigen = await db.inventarioSubalmacen
+        const inventarioOrigenArray = await db.inventarioSubalmacen
           .where('[productoId+subalmacenId]')
           .equals([productoId, origenId])
-          .first();
+          .toArray();
         
+        if (!inventarioOrigenArray.length) {
+          console.error("No se encontró el producto en el subalmacén de origen");
+          return false;
+        }
+        
+        const inventarioOrigen = inventarioOrigenArray[0];
         console.log("Inventario origen:", inventarioOrigen);
         
         if (!inventarioOrigen || inventarioOrigen.stock < cantidad) {
@@ -348,20 +369,34 @@ export const dbAPI = {
         // Si destinoId es 0, esto significa una venta y no necesitamos transferir
         if (destinoId > 0) {
           // Buscar si ya existe el producto en el destino
-          const inventarioDestino = await db.inventarioSubalmacen
+          const inventarioDestinoArray = await db.inventarioSubalmacen
             .where('[productoId+subalmacenId]')
             .equals([productoId, destinoId])
-            .first();
+            .toArray();
           
-          console.log("Inventario destino:", inventarioDestino);
+          console.log("Búsqueda de inventario destino:", {productoId, subalmacenId: destinoId});
+          console.log("Inventario destino array:", inventarioDestinoArray);
           
-          if (inventarioDestino) {
+          if (inventarioDestinoArray.length > 0) {
+            const inventarioDestino = inventarioDestinoArray[0];
             // Actualizar stock existente
+            console.log("Actualizando stock en destino:", {
+              id: inventarioDestino.id,
+              stockActual: inventarioDestino.stock,
+              nuevoStock: inventarioDestino.stock + cantidad
+            });
+            
             await db.inventarioSubalmacen.update(inventarioDestino.id!, {
               stock: inventarioDestino.stock + cantidad
             });
           } else {
             // Crear nuevo registro de inventario
+            console.log("Creando nuevo registro en destino:", {
+              productoId,
+              subalmacenId: destinoId,
+              stock: cantidad
+            });
+            
             await db.inventarioSubalmacen.add({
               productoId,
               subalmacenId: destinoId,

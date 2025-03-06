@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -130,6 +131,15 @@ const Inventario = () => {
       toast({
         title: "Error",
         description: "Por favor complete todos los campos",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (origen === destino) {
+      toast({
+        title: "Error",
+        description: "El origen y destino no pueden ser iguales",
         variant: "destructive"
       });
       return;
