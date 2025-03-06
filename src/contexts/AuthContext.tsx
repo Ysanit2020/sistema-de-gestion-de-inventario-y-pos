@@ -99,9 +99,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   // Asegurar que subalmacenId es un número o undefined, nunca null
-  const subalmacenId = currentUser?.subalmacenId !== null && currentUser?.subalmacenId !== undefined 
-    ? Number(currentUser.subalmacenId) 
-    : undefined;
+  // Para que los administradores puedan usar el punto de venta, asignarles el primer subalmacén
+  const getSubalmacenId = () => {
+    // Si el usuario es administrador y no tiene un subalmacén asignado, pero necesita acceder a funciones de venta,
+    // le asignamos por defecto el subalmacén principal (id 1)
+    if (currentUser?.rol === "admin" && !currentUser?.subalmacenId) {
+      return 1; // Almacén principal por defecto para administradores
+    }
+    
+    if (currentUser?.subalmacenId !== null && currentUser?.subalmacenId !== undefined) {
+      return Number(currentUser.subalmacenId);
+    }
+    
+    return undefined;
+  };
+  
+  const subalmacenId = getSubalmacenId();
   
   return (
     <AuthContext.Provider

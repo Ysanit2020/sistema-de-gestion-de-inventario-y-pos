@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, DollarSign } from "lucide-react";
+import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, DollarSign, RefreshCw } from "lucide-react";
 import { db } from "@/services/database";
 import { useAuth } from "@/contexts/AuthContext";
 import { dbAPI, ProductoInterface } from "@/services/database-electron";
@@ -20,6 +19,7 @@ const Ventas = () => {
   const [pagoCon, setPagoCon] = useState("");
   const [cambio, setCambio] = useState(0);
   const [mostrarCambio, setMostrarCambio] = useState(false);
+  const [cargando, setCargando] = useState(false);
   const { toast } = useToast();
   const { currentUser, subalmacenId } = useAuth();
   
@@ -32,6 +32,7 @@ const Ventas = () => {
 
   const cargarProductos = async () => {
     try {
+      setCargando(true);
       if (subalmacenId) {
         console.log("Cargando productos del subalmacén:", subalmacenId);
         // Solo mostrar productos del subalmacén asignado al usuario
@@ -64,6 +65,8 @@ const Ventas = () => {
         description: "No se pudieron cargar los productos",
         variant: "destructive"
       });
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -322,13 +325,24 @@ const Ventas = () => {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="flex items-center mb-6">
-        <Link to="/dashboard">
-          <Button variant="ghost" className="mr-2 p-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-display font-bold">Punto de Ventas</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Link to="/dashboard">
+            <Button variant="ghost" className="mr-2 p-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-display font-bold">Punto de Ventas</h1>
+        </div>
+        <Button 
+          variant="outline" 
+          className="flex items-center" 
+          onClick={cargarProductos} 
+          disabled={cargando}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -348,7 +362,11 @@ const Ventas = () => {
           </Card>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {productosFiltrados.length > 0 ? (
+            {cargando ? (
+              <div className="col-span-full flex justify-center py-8">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : productosFiltrados.length > 0 ? (
               productosFiltrados.map((producto) => (
                 <Card 
                   key={producto.productoId || producto.id} 

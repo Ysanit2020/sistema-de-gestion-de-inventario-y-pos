@@ -359,20 +359,20 @@ export const dbAPI = {
         console.log("Transferir:", { productoId, cantidad, origenId, destinoId });
         
         // Verificar stock en el origen
-        const inventarioOrigenArray = await db.inventarioSubalmacen
-          .where('[productoId+subalmacenId]')
-          .equals([productoId, origenId])
-          .toArray();
+        const inventarioOrigen = await db.inventarioSubalmacen
+          .where('subalmacenId')
+          .equals(origenId)
+          .and(item => item.productoId === productoId)
+          .first();
         
-        if (!inventarioOrigenArray.length) {
+        if (!inventarioOrigen) {
           console.error("No se encontró el producto en el subalmacén de origen");
           return false;
         }
         
-        const inventarioOrigen = inventarioOrigenArray[0];
         console.log("Inventario origen:", inventarioOrigen);
         
-        if (!inventarioOrigen || inventarioOrigen.stock < cantidad) {
+        if (inventarioOrigen.stock < cantidad) {
           console.error("Stock insuficiente para transferir");
           return false;
         }
@@ -385,16 +385,13 @@ export const dbAPI = {
         // Si destinoId es 0, esto significa una venta y no necesitamos transferir
         if (destinoId > 0) {
           // Buscar si ya existe el producto en el destino
-          const inventarioDestinoArray = await db.inventarioSubalmacen
-            .where('[productoId+subalmacenId]')
-            .equals([productoId, destinoId])
-            .toArray();
+          const inventarioDestino = await db.inventarioSubalmacen
+            .where('subalmacenId')
+            .equals(destinoId)
+            .and(item => item.productoId === productoId)
+            .first();
           
-          console.log("Búsqueda de inventario destino:", {productoId, subalmacenId: destinoId});
-          console.log("Inventario destino array:", inventarioDestinoArray);
-          
-          if (inventarioDestinoArray.length > 0) {
-            const inventarioDestino = inventarioDestinoArray[0];
+          if (inventarioDestino) {
             // Actualizar stock existente
             console.log("Actualizando stock en destino:", {
               id: inventarioDestino.id,
@@ -435,10 +432,25 @@ export const dbAPI = {
       return window.electronAPI.getUsuarios();
     } else {
       console.warn("Electron no disponible, usando datos de ejemplo");
-      return [
-        { id: 1, usuario: "admin", password: "admin123", rol: "admin", nombre: "Administrador" },
-        { id: 2, usuario: "vendedor", password: "vendedor123", rol: "trabajador", nombre: "Vendedor", subalmacenId: 2 }
-      ];
+      try {
+        // Intentar obtener usuarios de la base de datos local
+        const usuarios = await db.usuarios.toArray();
+        if (usuarios && usuarios.length > 0) {
+          return usuarios;
+        }
+        
+        // Si no hay usuarios, devolver datos de ejemplo
+        return [
+          { id: 1, usuario: "admin", password: "admin123", rol: "admin", nombre: "Administrador", subalmacenId: 1 },
+          { id: 2, usuario: "vendedor", password: "vendedor123", rol: "trabajador", nombre: "Vendedor", subalmacenId: 2 }
+        ];
+      } catch (error) {
+        console.error("Error al obtener usuarios:", error);
+        return [
+          { id: 1, usuario: "admin", password: "admin123", rol: "admin", nombre: "Administrador", subalmacenId: 1 },
+          { id: 2, usuario: "vendedor", password: "vendedor123", rol: "trabajador", nombre: "Vendedor", subalmacenId: 2 }
+        ];
+      }
     }
   },
   

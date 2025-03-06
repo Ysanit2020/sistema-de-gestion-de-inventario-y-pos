@@ -1,3 +1,4 @@
+
 import Dexie from "dexie";
 
 // Definición de la base de datos
@@ -13,12 +14,12 @@ export class AppDatabase extends Dexie {
     super("gestorDB");
     
     // Definir esquemas de tablas
-    this.version(2).stores({
+    this.version(3).stores({
       productos: "++id, codigo, nombre, categoria, precio",
       ventas: "++id, fecha",
-      usuarios: "++id, usuario, password, rol",
+      usuarios: "++id, usuario, password, rol, subalmacenId",
       subalmacenes: "++id, nombre",
-      inventarioSubalmacen: "++id, productoId, subalmacenId, stock",
+      inventarioSubalmacen: "++id, productoId, subalmacenId, [productoId+subalmacenId]",
       configuracion: "++id, clave, valor"
     });
     
@@ -169,13 +170,15 @@ export const inicializarDatos = async () => {
         usuario: "admin",
         password: "admin123", // En una aplicación real deberías usar hash
         rol: "admin",
-        nombre: "Administrador"
+        nombre: "Administrador",
+        subalmacenId: 1
       },
       {
         usuario: "vendedor",
         password: "vendedor123", // En una aplicación real deberías usar hash
         rol: "trabajador",
-        nombre: "Vendedor"
+        nombre: "Vendedor",
+        subalmacenId: 2
       }
     ]);
   }
