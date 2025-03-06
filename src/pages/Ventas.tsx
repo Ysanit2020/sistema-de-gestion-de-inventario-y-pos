@@ -24,6 +24,15 @@ const Ventas = () => {
   const { currentUser, subalmacenId } = useAuth();
   
   useEffect(() => {
+    if (!subalmacenId) {
+      toast({
+        title: "Error",
+        description: "No tienes un punto de venta asignado",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     cargarProductos();
   }, [subalmacenId]);
 
@@ -31,15 +40,21 @@ const Ventas = () => {
     try {
       if (subalmacenId) {
         console.log("Cargando productos del subalmacén:", subalmacenId);
+        // Solo mostrar productos del subalmacén asignado al usuario
         const inventario = await dbAPI.getInventarioSubalmacen(subalmacenId);
         
+        // Filtrar productos con stock mayor a 0
         const productosConStock = inventario.filter(item => item.stock > 0);
         console.log("Productos con stock en subalmacén:", productosConStock);
         setProductos(productosConStock);
       } else {
-        console.log("Usuario sin subalmacén asignado, cargando todos los productos");
-        const productosGuardados = await dbAPI.getProductos();
-        setProductos(productosGuardados.filter(producto => producto.stock > 0));
+        console.log("Usuario sin subalmacén asignado");
+        toast({
+          title: "Sin punto de venta",
+          description: "No tienes un punto de venta asignado",
+          variant: "destructive"
+        });
+        setProductos([]);
       }
     } catch (error) {
       console.error("Error al cargar productos:", error);
@@ -350,7 +365,9 @@ const Ventas = () => {
               ))
             ) : (
               <div className="col-span-full text-center py-8 text-muted-foreground">
-                No se encontraron productos
+                {subalmacenId ? 
+                  "No hay productos disponibles en este punto de venta" : 
+                  "No tienes un punto de venta asignado"}
               </div>
             )}
           </div>

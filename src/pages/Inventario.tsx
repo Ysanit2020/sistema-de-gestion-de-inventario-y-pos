@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -114,6 +113,16 @@ const Inventario = () => {
       return inventarioSubalmacen[subalmacenId][productoId];
     }
     return 0;
+  };
+  
+  const getStockTotal = (productoId: number): number => {
+    let total = 0;
+    subalmacenes.forEach(subalmacen => {
+      if (subalmacen.id) {
+        total += getStockEnSubalmacen(productoId, subalmacen.id);
+      }
+    });
+    return total;
   };
   
   const transferirProducto = async () => {
@@ -323,8 +332,8 @@ const Inventario = () => {
                   <td className="py-3 px-4">{producto.categoria}</td>
                   <td className="py-3 px-4 text-right">${producto.precio.toFixed(2)}</td>
                   <td className="py-3 px-4 text-right">
-                    <span className={producto.stock < 10 ? "text-destructive font-medium" : ""}>
-                      {producto.stock}
+                    <span className={getStockTotal(producto.id!) < 10 ? "text-destructive font-medium" : ""}>
+                      {getStockTotal(producto.id!)}
                     </span>
                   </td>
                   {subalmacenes.map(subalmacen => (

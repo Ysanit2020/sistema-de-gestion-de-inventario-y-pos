@@ -109,7 +109,7 @@ export const dbAPI = {
           // Nuevo producto
           const id = await db.productos.add(producto);
           
-          // Si hay subalmacenes, inicializar inventario en almacén principal
+          // Agregar el stock inicial al almacén principal (primer subalmacén)
           const subalmacenes = await db.subalmacenes.toArray();
           if (subalmacenes.length > 0) {
             const almacenPrincipal = subalmacenes[0];

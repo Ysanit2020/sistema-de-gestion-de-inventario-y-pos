@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -6,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save } from "lucide-react";
 import { db } from "@/services/database";
 import { useAuth } from "@/contexts/AuthContext";
+import { dbAPI } from "@/services/database-electron";
 
 const ProductoForm = () => {
   const { id } = useParams();
@@ -146,10 +148,25 @@ const ProductoForm = () => {
           return;
         }
         
-        await db.productos.add(productoGuardar);
+        // Guardar producto en la tabla principal
+        const nuevoProductoId = await db.productos.add(productoGuardar);
+        
+        // Obtener subalmacén principal (el primero)
+        const subalmacenes = await db.subalmacenes.toArray();
+        if (subalmacenes.length > 0) {
+          const almacenPrincipal = subalmacenes[0];
+          
+          // Agregar todo el stock al almacén principal
+          await db.inventarioSubalmacen.add({
+            productoId: nuevoProductoId,
+            subalmacenId: almacenPrincipal.id!,
+            stock: Number(producto.stock)
+          });
+        }
+        
         toast({
           title: "Éxito",
-          description: "Producto añadido correctamente",
+          description: "Producto añadido correctamente al almacén principal",
         });
       }
       
