@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -40,11 +41,18 @@ const Ventas = () => {
         const productosConStock = inventario.filter((item: any) => item.stock > 0);
         console.log("Productos con stock en subalmacén:", productosConStock);
         setProductos(productosConStock);
+        
+        if (productosConStock.length === 0) {
+          toast({
+            title: "Sin inventario",
+            description: "No hay productos en este punto de venta. Contacta al administrador para transferir inventario.",
+          });
+        }
       } else {
         console.log("Usuario sin subalmacén asignado");
         toast({
           title: "Sin punto de venta",
-          description: "No tienes un punto de venta asignado. Contacta al administrador.",
+          description: "No tienes un punto de venta asignado. Contacta al administrador para que te asigne uno.",
           variant: "destructive"
         });
         setProductos([]);

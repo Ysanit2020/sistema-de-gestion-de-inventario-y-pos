@@ -98,6 +98,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
+  // Asegurar que subalmacenId es un número o undefined, nunca null
+  const subalmacenId = currentUser?.subalmacenId !== null && currentUser?.subalmacenId !== undefined 
+    ? Number(currentUser.subalmacenId) 
+    : undefined;
+  
+  console.log("AuthContext - currentUser:", currentUser);
+  console.log("AuthContext - subalmacenId:", subalmacenId);
+  
   return (
     <AuthContext.Provider
       value={{
@@ -107,7 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         isAdmin: currentUser?.rol === "admin",
-        subalmacenId: currentUser?.subalmacenId,
+        subalmacenId,
         refreshUser
       }}
     >

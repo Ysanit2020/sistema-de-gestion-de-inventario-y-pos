@@ -1,4 +1,3 @@
-
 // Interfaces
 import { db } from "./database";
 
@@ -167,13 +166,30 @@ export const dbAPI = {
       return window.electronAPI.login(username, password);
     } else {
       console.warn("Electron no disponible, usando datos de ejemplo");
+      
+      // Primero, intentamos obtener el usuario de la base de datos local
+      try {
+        const usuarios = await db.usuarios.toArray();
+        const usuario = usuarios.find(u => 
+          u.usuario === username && u.password === password);
+          
+        if (usuario) {
+          console.log("Usuario encontrado en DB:", usuario);
+          return usuario;
+        }
+      } catch (error) {
+        console.error("Error al buscar usuario en DB:", error);
+      }
+      
+      // Si no encontramos el usuario en la DB, usamos los datos de ejemplo
       if (username === "admin" && password === "admin123") {
         return {
           id: 1,
           usuario: "admin",
           password: "admin123",
           rol: "admin",
-          nombre: "Administrador"
+          nombre: "Administrador",
+          subalmacenId: 1 // Asignamos el almacén principal al admin
         };
       } else if (username === "vendedor" && password === "vendedor123") {
         return {
@@ -182,7 +198,7 @@ export const dbAPI = {
           password: "vendedor123",
           rol: "trabajador",
           nombre: "Vendedor",
-          subalmacenId: 2
+          subalmacenId: 2 // Asignamos un punto de venta al vendedor
         };
       }
       return null;
