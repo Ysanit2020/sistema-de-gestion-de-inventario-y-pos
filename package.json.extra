@@ -1,0 +1,11 @@
+
+{
+  "scripts": {
+    "electron": "cross-env NODE_ENV=development electron electron/main.js",
+    "electron:build": "node scripts/build-electron.js",
+    "electron:build-win": "node scripts/build-electron.js windows",
+    "electron:build-mac": "node scripts/build-electron.js mac",
+    "electron:build-linux": "node scripts/build-electron.js linux",
+    "build:all": "npm run build && npm run electron:build"
+  }
+}
