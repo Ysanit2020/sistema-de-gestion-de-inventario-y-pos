@@ -26,41 +26,59 @@ npm run dev
 
 ## Compilar la aplicación para distribución
 
-### Método 1: Usando script directo
+### Opción 1: Usando script de electron:build
 
-Ya que el script `electron:build` no está definido en package.json, puedes usar el script de compilación directamente:
+Para compilar la aplicación y crear los archivos instalables, sigue estos pasos:
 
-1. Asegúrate de tener instalado Node.js 18 o superior
-2. Ejecuta los siguientes comandos:
+1. Asegúrate de tener instaladas las dependencias:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
 
-```bash
-npm install --legacy-peer-deps
-npm run build
-node scripts/build-electron.js
-```
+2. Ejecuta el script de construcción:
+   ```bash
+   node scripts/build-electron.js
+   ```
 
-Para una plataforma específica:
+   Esto compilará tu aplicación React y luego empaquetará la aplicación Electron para tu sistema operativo actual.
 
-```bash
-# Para Windows
-node scripts/build-electron.js windows
+3. Para una plataforma específica:
+   ```bash
+   # Para Windows
+   node scripts/build-electron.js windows
 
-# Para macOS
-node scripts/build-electron.js mac
+   # Para macOS
+   node scripts/build-electron.js mac
 
-# Para Linux
-node scripts/build-electron.js linux
-```
+   # Para Linux
+   node scripts/build-electron.js linux
+   ```
 
-### Método 2: Usando npx electron-builder
+### Opción 2: Proceso manual paso a paso
 
-Alternativamente, puedes usar electron-builder directamente:
+Si prefieres ejecutar los comandos manualmente:
 
-```bash
-npm install --legacy-peer-deps
-npm run build
-npx electron-builder --win  # o --mac o --linux según tu plataforma
-```
+1. Instala las dependencias:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
+
+2. Compila la aplicación React:
+   ```bash
+   npm run build
+   ```
+
+3. Empaqueta con electron-builder para tu plataforma:
+   ```bash
+   # Para Windows
+   npx electron-builder --win
+
+   # Para macOS
+   npx electron-builder --mac
+
+   # Para Linux
+   npx electron-builder --linux
+   ```
 
 Los archivos instalables se crearán en la carpeta `release` con el nombre "Sistema de Gestión de Inventario y POS". Se generará tanto una versión instalable (.exe) como una versión portable.
 
