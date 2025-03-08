@@ -1,5 +1,5 @@
 
-# Instrucciones para ejecutar y compilar la aplicación
+# Instrucciones para ejecutar y compilar la aplicación para ver si es verdad que esta vinculado
 
 ## Requisitos previos
 - Node.js (versión 18 o superior, se ha probado con Node 22)
