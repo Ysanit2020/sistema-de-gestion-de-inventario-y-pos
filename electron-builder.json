@@ -9,9 +9,13 @@
     "dist/**/*",
     "electron/**/*"
   ],
+  "extraMetadata": {
+    "main": "electron/main.js"
+  },
   "mac": {
     "category": "public.app-category.business",
-    "target": "dmg"
+    "target": "dmg",
+    "icon": "public/favicon.ico"
   },
   "win": {
     "target": [
@@ -32,7 +36,8 @@
       "AppImage",
       "deb"
     ],
-    "category": "Office"
+    "category": "Office",
+    "icon": "public/favicon.ico"
   },
   "nsis": {
     "oneClick": false,
@@ -44,5 +49,6 @@
   },
   "portable": {
     "artifactName": "${productName}-Portable-${version}.${ext}"
-  }
+  },
+  "publish": null
 }

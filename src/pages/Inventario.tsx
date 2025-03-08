@@ -102,7 +102,8 @@ const Inventario = () => {
         });
         
         if (stockTotal < STOCK_BAJO_UMBRAL) {
-          productosBajoStock.push({...producto, stockTotal});
+          // Crear una copia del producto sin agregar stockTotal como propiedad
+          productosBajoStock.push({...producto});
         }
       }
     });
@@ -267,8 +268,8 @@ const Inventario = () => {
             </Button>
           </Link>
           <Button 
-            variant={productosStockBajo.length > 0 ? "destructive" : "outline"} 
-            className="flex items-center"
+            variant="outline" 
+            className={`flex items-center ${productosStockBajo.length > 0 ? "text-destructive border-destructive hover:bg-destructive/10" : ""}`}
             onClick={() => setMostrarAlertaStock(!mostrarAlertaStock)}
           >
             <AlertTriangle className="mr-2 h-4 w-4" /> 
