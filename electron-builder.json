@@ -1,7 +1,7 @@
 
 {
   "appId": "com.miempresa.sistemagestion",
-  "productName": "Sistema de Gestión",
+  "productName": "Sistema de Gestión de Inventario y POS",
   "directories": {
     "output": "release"
   },
@@ -39,7 +39,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Sistema de Gestión",
+    "shortcutName": "Sistema de Gestión de Inventario y POS",
     "artifactName": "${productName}-Setup-${version}.${ext}"
   },
   "portable": {

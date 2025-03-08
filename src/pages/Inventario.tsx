@@ -4,10 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
 import Card from "@/components/ui-custom/Card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Search, Edit, Trash2, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, Trash2, ArrowRightLeft, AlertTriangle } from "lucide-react";
 import { dbAPI, ProductoInterface, SubalmacenInterface } from "@/services/database-electron";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/services/database";
+
+// Definimos el umbral de stock bajo
+const STOCK_BAJO_UMBRAL = 10;
 
 const Inventario = () => {
   const [productos, setProductos] = useState<ProductoInterface[]>([]);
@@ -19,6 +22,8 @@ const Inventario = () => {
   const [origen, setOrigen] = useState<number | null>(null);
   const [destino, setDestino] = useState<number | null>(null);
   const [cantidad, setCantidad] = useState<number>(1);
+  const [productosStockBajo, setProductosStockBajo] = useState<ProductoInterface[]>([]);
+  const [mostrarAlertaStock, setMostrarAlertaStock] = useState<boolean>(false);
   
   const { toast } = useToast();
   const { isAdmin } = useAuth();
@@ -71,11 +76,45 @@ const Inventario = () => {
       
       console.log("Inventario organizado:", inventarioTemp);
       setInventarioSubalmacen(inventarioTemp);
+      
+      // Verificar productos con stock bajo
+      verificarStockBajo(productosGuardados, inventarioTemp, subalmacenesGuardados);
     } catch (error) {
       console.error("Error al cargar datos:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los productos",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const verificarStockBajo = (productos: ProductoInterface[], inventario: any, subalmacenes: SubalmacenInterface[]) => {
+    const productosBajoStock: ProductoInterface[] = [];
+    
+    productos.forEach(producto => {
+      if (producto.id) {
+        let stockTotal = 0;
+        subalmacenes.forEach(subalmacen => {
+          if (subalmacen.id && inventario[subalmacen.id] && inventario[subalmacen.id][producto.id!] !== undefined) {
+            stockTotal += inventario[subalmacen.id][producto.id!];
+          }
+        });
+        
+        if (stockTotal < STOCK_BAJO_UMBRAL) {
+          productosBajoStock.push({...producto, stockTotal});
+        }
+      }
+    });
+    
+    console.log("Productos con bajo stock:", productosBajoStock);
+    setProductosStockBajo(productosBajoStock);
+    
+    // Mostrar alerta si hay productos con bajo stock
+    if (productosBajoStock.length > 0) {
+      toast({
+        title: "Alerta de Stock",
+        description: `Hay ${productosBajoStock.length} producto(s) con stock bajo`,
         variant: "destructive"
       });
     }
@@ -227,8 +266,65 @@ const Inventario = () => {
               <ArrowRightLeft className="mr-2 h-4 w-4" /> Gestionar Subalmacenes
             </Button>
           </Link>
+          <Button 
+            variant={productosStockBajo.length > 0 ? "destructive" : "outline"} 
+            className="flex items-center"
+            onClick={() => setMostrarAlertaStock(!mostrarAlertaStock)}
+          >
+            <AlertTriangle className="mr-2 h-4 w-4" /> 
+            Productos con Stock Bajo ({productosStockBajo.length})
+          </Button>
         </div>
       </div>
+      
+      {mostrarAlertaStock && productosStockBajo.length > 0 && (
+        <Card className="mb-6 p-4 border-destructive">
+          <h2 className="text-lg font-semibold mb-4 flex items-center text-destructive">
+            <AlertTriangle className="mr-2 h-5 w-5" /> 
+            Productos con Stock Bajo
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="py-2 px-3 text-left">Código</th>
+                  <th className="py-2 px-3 text-left">Nombre</th>
+                  <th className="py-2 px-3 text-right">Stock Total</th>
+                  <th className="py-2 px-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productosStockBajo.map(producto => (
+                  <tr key={`bajo-${producto.id}`} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-3">{producto.codigo}</td>
+                    <td className="py-2 px-3">{producto.nombre}</td>
+                    <td className="py-2 px-3 text-right text-destructive font-medium">
+                      {getStockTotal(producto.id!)}
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="flex justify-center gap-2">
+                        <Link to={`/inventario/editar/${producto.id}`}>
+                          <Button variant="ghost" size="sm" className="p-2">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="p-2 text-blue-600 hover:text-blue-800"
+                          onClick={() => abrirTransferencia(producto)}
+                        >
+                          <ArrowRightLeft className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
       
       <Card className="mb-6 p-4">
         <div className="relative">
@@ -342,7 +438,7 @@ const Inventario = () => {
                   <td className="py-3 px-4">{producto.categoria}</td>
                   <td className="py-3 px-4 text-right">${producto.precio.toFixed(2)}</td>
                   <td className="py-3 px-4 text-right">
-                    <span className={getStockTotal(producto.id!) < 10 ? "text-destructive font-medium" : ""}>
+                    <span className={getStockTotal(producto.id!) < STOCK_BAJO_UMBRAL ? "text-destructive font-medium" : ""}>
                       {getStockTotal(producto.id!)}
                     </span>
                   </td>

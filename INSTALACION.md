@@ -2,7 +2,7 @@
 # Instrucciones para ejecutar y compilar la aplicación
 
 ## Requisitos previos
-- Node.js (versión 16 o superior)
+- Node.js (versión 16 o superior, recomendada la versión 18 LTS)
 - npm (incluido con Node.js)
 - Git (opcional, para clonar el repositorio)
 
@@ -14,6 +14,12 @@
 
 ```bash
 npm install
+```
+
+Si encuentras problemas con dependencias obsoletas, usa:
+
+```bash
+npm install --legacy-peer-deps
 ```
 
 4. Inicia la aplicación en modo desarrollo:
@@ -31,7 +37,7 @@ npm run build
 npm run electron:build
 ```
 
-Los archivos instalables se crearán en la carpeta `release`.
+Los archivos instalables se crearán en la carpeta `release` con el nombre "Sistema de Gestión de Inventario y POS".
 
 ### Para macOS
 
@@ -53,3 +59,5 @@ npm run electron:build-linux
 - Por defecto, se incluirán usuarios de ejemplo:
   - Usuario administrador: `admin` / Contraseña: `admin123`
   - Usuario vendedor: `vendedor` / Contraseña: `vendedor123`
+- La aplicación se instalará con el nombre "Sistema de Gestión de Inventario y POS" y usará el icono configurado en electron-builder.json.
+- Se creará una versión instalable (.exe) y una versión portable para Windows.

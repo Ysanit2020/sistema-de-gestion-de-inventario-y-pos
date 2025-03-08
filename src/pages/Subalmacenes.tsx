@@ -196,6 +196,20 @@ const Subalmacenes = () => {
     }));
   };
   
+  // Nueva función para cambio directo de cantidad
+  const handleCantidadChange = (productoId: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = parseInt(e.target.value);
+    const stockDisponible = inventarioSubalmacen.find(item => item.productoId === productoId)?.stock || 0;
+    
+    if (isNaN(valor) || valor < 0) {
+      handleTransferirChange(productoId, 0);
+    } else if (valor > stockDisponible) {
+      handleTransferirChange(productoId, stockDisponible);
+    } else {
+      handleTransferirChange(productoId, valor);
+    }
+  };
+  
   const transferirProductos = async () => {
     if (!origenId || !destinoId) {
       toast({
@@ -508,9 +522,18 @@ const Subalmacenes = () => {
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="mx-2 min-w-[40px] text-center">
-                            {transferencias[item.productoId] || 0}
-                          </span>
+                          
+                          {/* Campo para ingresar la cantidad directamente */}
+                          <input
+                            type="number"
+                            className="mx-2 w-20 text-center border rounded-md p-1"
+                            value={transferencias[item.productoId] || 0}
+                            onChange={(e) => handleCantidadChange(item.productoId, e)}
+                            min="0"
+                            max={item.stock}
+                            disabled={cargando}
+                          />
+                          
                           <Button 
                             variant="outline" 
                             size="sm" 
