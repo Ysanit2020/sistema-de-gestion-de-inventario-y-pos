@@ -1,4 +1,5 @@
 
+#!/usr/bin/env node
 const { execSync } = require('child_process');
 const os = require('os');
 const fs = require('fs');
@@ -17,63 +18,11 @@ function ejecutarComando(comando, opciones = {}) {
   }
 }
 
-// Verificar si package.json tiene las dependencias y scripts necesarios
-function verificarPaqueteJson() {
-  console.log('Verificando package.json...');
-  
-  try {
-    const contenidoPaquete = fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8');
-    const paquete = JSON.parse(contenidoPaquete);
-    
-    // Verificar scripts necesarios
-    const scriptNecesarios = ['build', 'electron:build'];
-    const scriptsFaltantes = scriptNecesarios.filter(script => !paquete.scripts || !paquete.scripts[script]);
-    
-    if (scriptsFaltantes.length > 0) {
-      console.warn(`Advertencia: Faltan los siguientes scripts en package.json: ${scriptsFaltantes.join(', ')}`);
-      console.warn('Asegúrate de que estos scripts existan antes de continuar.');
-    }
-    
-    // Verificar dependencias de Electron
-    const dependenciasElectron = ['electron', 'electron-builder'];
-    const depFaltantes = dependenciasElectron.filter(dep => 
-      (!paquete.dependencies || !paquete.dependencies[dep]) && 
-      (!paquete.devDependencies || !paquete.devDependencies[dep])
-    );
-    
-    if (depFaltantes.length > 0) {
-      console.warn(`Advertencia: Faltan las siguientes dependencias: ${depFaltantes.join(', ')}`);
-    }
-    
-    return scriptsFaltantes.length === 0;
-  } catch (error) {
-    console.error('Error al leer o analizar package.json:', error.message);
-    return false;
-  }
-}
-
-// Verificar que existe el archivo de configuración de electron-builder
-function verificarConfigElectron() {
-  const archivosConfig = ['electron-builder.json', 'electron-builder.yml', 'electron-builder.yaml'];
-  const existeConfig = archivosConfig.some(archivo => fs.existsSync(path.join(process.cwd(), archivo)));
-  
-  if (!existeConfig) {
-    console.warn('Advertencia: No se encontró un archivo de configuración de electron-builder.');
-    console.warn('Asegúrate de tener uno de estos archivos: electron-builder.json, electron-builder.yml, electron-builder.yaml');
-  }
-  
-  return existeConfig;
-}
-
 // Función principal
 async function main() {
   console.log('=== Compilación de aplicación Electron ===');
   console.log(`Node.js: ${process.version}`);
   console.log(`Plataforma: ${os.platform()} (${os.arch()})`);
-  
-  // Verificar configuración
-  verificarPaqueteJson();
-  verificarConfigElectron();
   
   // Determinar la plataforma
   const plataformaArgumento = process.argv[2];
