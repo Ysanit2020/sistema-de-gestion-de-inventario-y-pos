@@ -50,5 +50,8 @@
   "portable": {
     "artifactName": "${productName}-Portable-${version}.${ext}"
   },
-  "publish": null
+  "publish": null,
+  "electronVersion": "35.0.0",
+  "buildDependenciesFromSource": true,
+  "npmRebuild": true
 }
