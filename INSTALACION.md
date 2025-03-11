@@ -1,5 +1,5 @@
 
-# Instrucciones para ejecutar y compilar la aplicación
+# Instrucciones para ejecutar, compilar e instalar la aplicación
 
 ## Requisitos previos
 - Node.js (versión 18 o superior, probado con Node 22)
@@ -26,18 +26,25 @@ npm run dev
 
 La aplicación está configurada como una Progressive Web App (PWA), lo que significa que puede instalarse directamente desde el navegador:
 
+### PC/Mac:
 1. Abre la aplicación en Chrome, Edge o cualquier navegador compatible con PWA
 2. Busca el icono de instalación en la barra de direcciones (💾 o similar)
 3. Haz clic en "Instalar" o "Instalar aplicación"
 4. La aplicación se instalará en tu dispositivo y podrás acceder a ella desde el menú de inicio/escritorio
 
-## Notas importantes
+### Dispositivos móviles:
+1. Abre la aplicación en Chrome (Android) o Safari (iOS)
+2. En Android: Aparecerá un mensaje "Añadir a pantalla de inicio"
+3. En iOS: Toca el icono de compartir y selecciona "Añadir a pantalla de inicio"
+4. La aplicación se instalará sin la barra de direcciones del navegador
 
-- La primera vez que ejecutes la aplicación, se creará una base de datos SQLite en la carpeta de datos de la aplicación.
+## Base de datos
+
+- La primera vez que ejecutes la aplicación, se creará una base de datos IndexedDB en el almacenamiento local del navegador.
+- Los datos son persistentes entre sesiones pero están vinculados al navegador/dispositivo específico donde se instaló.
 - Por defecto, se incluirán usuarios de ejemplo:
   - Usuario administrador: `admin` / Contraseña: `admin123`
   - Usuario vendedor: `vendedor` / Contraseña: `vendedor123`
-- Si usas Node.js 22, es posible que encuentres algunas advertencias de compatibilidad. La mayoría deberían ser inofensivas, pero si tienes problemas, considera usar Node.js 18 LTS.
 
 ## Solución de problemas comunes
 

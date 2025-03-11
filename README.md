@@ -24,12 +24,35 @@ npm run dev
 
 ## Instalación como PWA
 
-La aplicación está configurada como una Progressive Web App (PWA), lo que significa que puede instalarse directamente desde el navegador:
+La aplicación está configurada como una Progressive Web App (PWA), lo que significa que puede instalarse directamente desde cualquier navegador compatible:
 
+### Instalar en PC/Mac:
 1. Abre la aplicación en Chrome, Edge o cualquier navegador compatible con PWA
 2. Busca el icono de instalación en la barra de direcciones (💾 o similar)
 3. Haz clic en "Instalar" o "Instalar aplicación"
 4. La aplicación se instalará en tu dispositivo y podrás acceder a ella desde el menú de inicio/escritorio
+
+### Instalar en dispositivos móviles:
+1. Abre la aplicación en Chrome (Android) o Safari (iOS)
+2. En Android: Aparecerá un mensaje "Añadir a pantalla de inicio"
+3. En iOS: Toca el icono de compartir y selecciona "Añadir a pantalla de inicio"
+4. La aplicación se instalará sin la barra de direcciones del navegador
+
+### Instalación desde GitHub:
+1. Visita la URL del repositorio en GitHub
+2. Descarga o clona el repositorio
+3. Sigue los pasos de "Desarrollo local" para ejecutarlo
+4. Accede desde el navegador a la URL local (http://localhost:8080)
+5. Sigue los pasos de instalación como PWA
+
+## Base de datos local
+
+Esta aplicación utiliza Dexie.js (IndexedDB) para almacenar los datos localmente en el navegador. Los datos se guardan en:
+
+- **PC/Mac**: Dentro del almacenamiento del navegador donde se instaló
+- **Dispositivos móviles**: En el almacenamiento de la aplicación PWA
+
+Los datos son persistentes entre sesiones, pero están vinculados al navegador/dispositivo específico donde se instaló. No hay sincronización entre dispositivos.
 
 ## Características principales
 
@@ -39,7 +62,8 @@ La aplicación está configurada como una Progressive Web App (PWA), lo que sign
 - Reportes y estadísticas
 - Subalmacenes y ubicaciones
 - Interfaz responsive y moderna
-- Instalable como aplicación de escritorio (PWA)
+- Instalable como aplicación de escritorio/móvil (PWA)
+- Funciona sin conexión a internet
 
 ## Tecnologías utilizadas
 
@@ -48,7 +72,7 @@ La aplicación está configurada como una Progressive Web App (PWA), lo que sign
 - React
 - shadcn-ui
 - Tailwind CSS
-- SQLite (para base de datos local)
+- Dexie.js (IndexedDB para base de datos local)
 - PWA para instalación nativa
 
 ## Usuarios por defecto
@@ -75,4 +99,3 @@ rm package-lock.json
 ```bash
 npm install
 ```
-
