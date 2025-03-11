@@ -1,69 +1,78 @@
-# Welcome to your Lovable project
 
-## Project info
+# Sistema de Gestión de Inventario y POS
 
-**URL**: https://lovable.dev/projects/a61229cc-db77-4e52-8c66-eae84287b848
+Sistema de gestión de inventario y punto de venta construido con React + Vite y empaquetado como PWA (Progressive Web App).
 
-## How can I edit this code?
+## Requisitos previos
 
-There are several ways of editing your application.
+- Node.js (versión 18 o superior)
+- npm (versión 8 o superior)
+- Git (opcional, para clonar el repositorio)
 
-**Use Lovable**
+## Desarrollo local
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a61229cc-db77-4e52-8c66-eae84287b848) and start prompting.
+1. Clona o descarga el repositorio
+2. Instala las dependencias:
+```bash
+npm install
+```
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. Inicia el servidor de desarrollo:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Instalación como PWA
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+La aplicación está configurada como una Progressive Web App (PWA), lo que significa que puede instalarse directamente desde el navegador:
 
-**Use GitHub Codespaces**
+1. Abre la aplicación en Chrome, Edge o cualquier navegador compatible con PWA
+2. Busca el icono de instalación en la barra de direcciones (💾 o similar)
+3. Haz clic en "Instalar" o "Instalar aplicación"
+4. La aplicación se instalará en tu dispositivo y podrás acceder a ella desde el menú de inicio/escritorio
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Características principales
 
-## What technologies are used for this project?
+- Gestión completa de inventario
+- Sistema de punto de venta (POS)
+- Gestión de usuarios y roles
+- Reportes y estadísticas
+- Subalmacenes y ubicaciones
+- Interfaz responsive y moderna
+- Instalable como aplicación de escritorio (PWA)
 
-This project is built with .
+## Tecnologías utilizadas
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- SQLite (para base de datos local)
+- PWA para instalación nativa
 
-## How can I deploy this project?
+## Usuarios por defecto
 
-Simply open [Lovable](https://lovable.dev/projects/a61229cc-db77-4e52-8c66-eae84287b848) and click on Share -> Publish.
+- Administrador: `admin` / Contraseña: `admin123`
+- Vendedor: `vendedor` / Contraseña: `vendedor123`
 
-## I want to use a custom domain - is that possible?
+## Solución de problemas
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Si encuentras problemas durante la instalación:
+
+1. Limpia la caché de npm:
+```bash
+npm cache clean --force
+```
+
+2. Elimina node_modules y package-lock.json:
+```bash
+rm -rf node_modules
+rm package-lock.json
+```
+
+3. Reinstala las dependencias:
+```bash
+npm install
+```
+

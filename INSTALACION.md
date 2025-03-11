@@ -13,10 +13,8 @@
 3. Instala las dependencias:
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 ```
-
-El flag `--legacy-peer-deps` es necesario para evitar errores con dependencias obsoletas.
 
 4. Inicia la aplicación en modo desarrollo:
 
@@ -24,90 +22,14 @@ El flag `--legacy-peer-deps` es necesario para evitar errores con dependencias o
 npm run dev
 ```
 
-## Compilar la aplicación para distribución
+## Instalación como PWA
 
-### Opción 1: Usando script de electron:build
+La aplicación está configurada como una Progressive Web App (PWA), lo que significa que puede instalarse directamente desde el navegador:
 
-Para compilar la aplicación y crear los archivos instalables, sigue estos pasos:
-
-1. Asegúrate de tener instaladas las dependencias:
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-
-2. Ejecuta el script de construcción:
-   ```bash
-   node scripts/build-electron.js
-   ```
-
-   Esto compilará tu aplicación React y luego empaquetará la aplicación Electron para tu sistema operativo actual.
-
-3. Para una plataforma específica:
-   ```bash
-   # Para Windows
-   node scripts/build-electron.js windows
-
-   # Para macOS
-   node scripts/build-electron.js mac
-
-   # Para Linux
-   node scripts/build-electron.js linux
-   ```
-
-### Opción 2: Proceso manual paso a paso
-
-Si prefieres ejecutar los comandos manualmente:
-
-1. Instala las dependencias:
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-
-2. Compila la aplicación React:
-   ```bash
-   npm run build
-   ```
-
-3. Empaqueta con electron-builder para tu plataforma:
-   ```bash
-   # Para Windows
-   npx electron-builder --win
-
-   # Para macOS
-   npx electron-builder --mac
-
-   # Para Linux
-   npx electron-builder --linux
-   ```
-
-Los archivos instalables se crearán en la carpeta `release` con el nombre "Sistema de Gestión de Inventario y POS". Se generará tanto una versión instalable (.exe) como una versión portable.
-
-## Solución de problemas comunes
-
-Si encuentras errores relacionados con versiones de dependencias o conflictos, prueba los siguientes pasos:
-
-1. Limpia la caché de npm:
-   ```bash
-   npm cache clean --force
-   ```
-
-2. Elimina la carpeta node_modules y el archivo package-lock.json:
-   ```bash
-   rm -rf node_modules
-   rm package-lock.json
-   ```
-
-3. Reinstala las dependencias con el flag para ignorar problemas de dependencias entre pares:
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-
-4. Si continúas teniendo problemas, prueba con una versión LTS de Node.js (18 LTS) que es más estable para proyectos Electron.
-
-5. Si recibes errores sobre "native modules", asegúrate de tener instaladas las herramientas de compilación:
-   - En Windows: `npm install --global windows-build-tools`
-   - En macOS: Xcode Command Line Tools (`xcode-select --install`)
-   - En Linux: `sudo apt-get install build-essential`
+1. Abre la aplicación en Chrome, Edge o cualquier navegador compatible con PWA
+2. Busca el icono de instalación en la barra de direcciones (💾 o similar)
+3. Haz clic en "Instalar" o "Instalar aplicación"
+4. La aplicación se instalará en tu dispositivo y podrás acceder a ella desde el menú de inicio/escritorio
 
 ## Notas importantes
 
@@ -115,5 +37,26 @@ Si encuentras errores relacionados con versiones de dependencias o conflictos, p
 - Por defecto, se incluirán usuarios de ejemplo:
   - Usuario administrador: `admin` / Contraseña: `admin123`
   - Usuario vendedor: `vendedor` / Contraseña: `vendedor123`
-- La aplicación se instalará con el nombre "Sistema de Gestión de Inventario y POS" y usará el icono configurado en electron-builder.json.
 - Si usas Node.js 22, es posible que encuentres algunas advertencias de compatibilidad. La mayoría deberían ser inofensivas, pero si tienes problemas, considera usar Node.js 18 LTS.
+
+## Solución de problemas comunes
+
+Si encuentras errores durante la instalación, prueba los siguientes pasos:
+
+1. Limpia la caché de npm:
+```bash
+npm cache clean --force
+```
+
+2. Elimina la carpeta node_modules y el archivo package-lock.json:
+```bash
+rm -rf node_modules
+rm package-lock.json
+```
+
+3. Reinstala las dependencias:
+```bash
+npm install
+```
+
+4. Si continúas teniendo problemas, prueba con una versión LTS de Node.js (18 LTS) que es más estable.
