@@ -101,140 +101,204 @@ export const db = new AppDatabase();
 
 // Función para inicializar datos de ejemplo
 export const inicializarDatos = async () => {
-  // Verificar si ya existen productos
-  const countProductos = await db.productos.count();
+  console.log("Iniciando carga de datos de ejemplo...");
   
-  if (countProductos === 0) {
-    // Agregar productos de ejemplo
-    await db.productos.bulkAdd([
-      {
-        codigo: "P001",
-        nombre: "Arroz Integral 1kg",
-        descripcion: "Arroz integral de alta calidad",
-        categoria: "Abarrotes",
-        precio: 28.50,
-        costo: 22.00,
-        stock: 50,
-        stockMinimo: 10
-      },
-      {
-        codigo: "P002",
-        nombre: "Frijol Negro 1kg",
-        descripcion: "Frijol negro seleccionado",
-        categoria: "Abarrotes",
-        precio: 32.00,
-        costo: 25.00,
-        stock: 40,
-        stockMinimo: 8
-      },
-      {
-        codigo: "P003",
-        nombre: "Aceite de Oliva 500ml",
-        descripcion: "Aceite de oliva extra virgen",
-        categoria: "Aceites",
-        precio: 85.00,
-        costo: 65.00,
-        stock: 25,
-        stockMinimo: 5
-      },
-      {
-        codigo: "P004",
-        nombre: "Azúcar Refinada 1kg",
-        descripcion: "Azúcar blanca refinada",
-        categoria: "Abarrotes",
-        precio: 25.00,
-        costo: 20.00,
-        stock: 60,
-        stockMinimo: 15
-      },
-      {
-        codigo: "P005",
-        nombre: "Sal de Mesa 1kg",
-        descripcion: "Sal refinada",
-        categoria: "Abarrotes",
-        precio: 15.00,
-        costo: 10.00,
-        stock: 70,
-        stockMinimo: 20
-      }
-    ]);
-  }
-
-  // Verificar si ya existen usuarios
-  const countUsuarios = await db.usuarios.count();
-  
-  if (countUsuarios === 0) {
-    // Agregar usuarios por defecto
-    await db.usuarios.bulkAdd([
-      {
-        usuario: "admin",
-        password: "admin123", // En una aplicación real deberías usar hash
-        rol: "admin",
-        nombre: "Administrador",
-        subalmacenId: 1
-      },
-      {
-        usuario: "vendedor",
-        password: "vendedor123", // En una aplicación real deberías usar hash
-        rol: "trabajador",
-        nombre: "Vendedor",
-        subalmacenId: 2
-      }
-    ]);
-  }
-  
-  // Verificar si ya existen subalmacenes
-  const countSubalmacenes = await db.subalmacenes.count();
-  
-  if (countSubalmacenes === 0) {
-    // Agregar subalmacén principal por defecto
-    const idAlmacenPrincipal = await db.subalmacenes.add({
-      nombre: "Almacén Principal",
-      descripcion: "Almacén central de todos los productos"
-    });
+  try {
+    // Verificar si ya existen subalmacenes
+    const countSubalmacenes = await db.subalmacenes.count();
+    let idAlmacenPrincipal, idAlmacenVendedor;
     
-    // Agregar subalmacén para vendedores por defecto
-    const idAlmacenVendedor = await db.subalmacenes.add({
-      nombre: "Punto de Venta",
-      descripcion: "Productos disponibles para venta directa"
-    });
-    
-    // Si hay productos, inicializar su inventario en el almacén principal
-    if (countProductos > 0) {
-      const productos = await db.productos.toArray();
-      
-      for (const producto of productos) {
-        await db.inventarioSubalmacen.add({
-          productoId: producto.id!,
-          subalmacenId: idAlmacenPrincipal,
-          stock: producto.stock
-        });
-        
-        // Inicializar con algunos productos en el almacén de venta
-        await db.inventarioSubalmacen.add({
-          productoId: producto.id!,
-          subalmacenId: idAlmacenVendedor,
-          stock: Math.floor(producto.stock / 2) // La mitad del stock principal
-        });
-      }
-    }
-    
-    // Asignar subalmacén al vendedor
-    const vendedor = await db.usuarios.where("usuario").equals("vendedor").first();
-    if (vendedor) {
-      await db.usuarios.update(vendedor.id!, {
-        ...vendedor,
-        subalmacenId: idAlmacenVendedor
+    if (countSubalmacenes === 0) {
+      console.log("Creando subalmacenes...");
+      // Agregar subalmacén principal por defecto
+      idAlmacenPrincipal = await db.subalmacenes.add({
+        nombre: "Almacén Principal",
+        descripcion: "Almacén central de todos los productos"
       });
+      
+      // Agregar subalmacén para vendedores por defecto
+      idAlmacenVendedor = await db.subalmacenes.add({
+        nombre: "Punto de Venta",
+        descripcion: "Productos disponibles para venta directa"
+      });
+      console.log("Subalmacenes creados:", idAlmacenPrincipal, idAlmacenVendedor);
+    } else {
+      // Obtener IDs de subalmacenes existentes
+      const subalmacenes = await db.subalmacenes.toArray();
+      idAlmacenPrincipal = subalmacenes[0]?.id;
+      idAlmacenVendedor = subalmacenes[1]?.id;
+      console.log("Subalmacenes existentes:", idAlmacenPrincipal, idAlmacenVendedor);
     }
-  }
-  
-  // Verificar configuración
-  const themeConfig = await db.configuracion.where("clave").equals("theme").first();
-  if (!themeConfig) {
-    await db.configuracion.add({
-      clave: "theme",
-      valor: "light"
-    });
+    
+    // Verificar si ya existen productos
+    const countProductos = await db.productos.count();
+    
+    if (countProductos === 0) {
+      console.log("Creando productos de ejemplo...");
+      // Productos de ejemplo a agregar
+      const productosEjemplo = [
+        {
+          codigo: "P001",
+          nombre: "Arroz Integral 1kg",
+          descripcion: "Arroz integral de alta calidad",
+          categoria: "Abarrotes",
+          precio: 28.50,
+          costo: 22.00,
+          stock: 50,
+          stockMinimo: 10
+        },
+        {
+          codigo: "P002",
+          nombre: "Frijol Negro 1kg",
+          descripcion: "Frijol negro seleccionado",
+          categoria: "Abarrotes",
+          precio: 32.00,
+          costo: 25.00,
+          stock: 40,
+          stockMinimo: 8
+        },
+        {
+          codigo: "P003",
+          nombre: "Aceite de Oliva 500ml",
+          descripcion: "Aceite de oliva extra virgen",
+          categoria: "Aceites",
+          precio: 85.00,
+          costo: 65.00,
+          stock: 25,
+          stockMinimo: 5
+        },
+        {
+          codigo: "P004",
+          nombre: "Azúcar Refinada 1kg",
+          descripcion: "Azúcar blanca refinada",
+          categoria: "Abarrotes",
+          precio: 25.00,
+          costo: 20.00,
+          stock: 60,
+          stockMinimo: 15
+        },
+        {
+          codigo: "P005",
+          nombre: "Sal de Mesa 1kg",
+          descripcion: "Sal refinada",
+          categoria: "Abarrotes",
+          precio: 15.00,
+          costo: 10.00,
+          stock: 70,
+          stockMinimo: 20
+        }
+      ];
+      
+      // Agregar productos
+      const productosIds = await db.productos.bulkAdd(productosEjemplo, {allKeys: true});
+      console.log("Productos creados con IDs:", productosIds);
+      
+      // Si tenemos subalmacenes creados, inicializar inventario
+      if (idAlmacenPrincipal && idAlmacenVendedor) {
+        console.log("Inicializando inventario en subalmacenes...");
+        
+        const inventarioItems = [];
+        
+        // Para cada producto, crear entradas en el inventario de ambos subalmacenes
+        for (let i = 0; i < productosIds.length; i++) {
+          const productoId = productosIds[i];
+          const stock = productosEjemplo[i].stock;
+          
+          // Inventario en almacén principal
+          inventarioItems.push({
+            productoId,
+            subalmacenId: idAlmacenPrincipal,
+            stock: stock
+          });
+          
+          // Inventario en punto de venta (la mitad del stock)
+          inventarioItems.push({
+            productoId,
+            subalmacenId: idAlmacenVendedor,
+            stock: Math.floor(stock / 2)
+          });
+        }
+        
+        await db.inventarioSubalmacen.bulkAdd(inventarioItems);
+        console.log("Inventario inicializado:", inventarioItems.length, "entradas");
+      }
+    } else {
+      console.log("Ya existen productos:", countProductos);
+      
+      // Verificar si el inventario está correctamente inicializado
+      const countInventario = await db.inventarioSubalmacen.count();
+      if (countInventario === 0 && idAlmacenPrincipal && idAlmacenVendedor) {
+        console.log("Re-inicializando inventario...");
+        const productos = await db.productos.toArray();
+        
+        const inventarioItems = [];
+        
+        // Para cada producto, crear entradas en el inventario de ambos subalmacenes
+        for (const producto of productos) {
+          if (producto.id) {
+            // Inventario en almacén principal
+            inventarioItems.push({
+              productoId: producto.id,
+              subalmacenId: idAlmacenPrincipal,
+              stock: producto.stock
+            });
+            
+            // Inventario en punto de venta (la mitad del stock)
+            inventarioItems.push({
+              productoId: producto.id,
+              subalmacenId: idAlmacenVendedor,
+              stock: Math.floor(producto.stock / 2)
+            });
+          }
+        }
+        
+        await db.inventarioSubalmacen.bulkAdd(inventarioItems);
+        console.log("Inventario re-inicializado:", inventarioItems.length, "entradas");
+      } else {
+        console.log("Inventario existente:", countInventario, "entradas");
+      }
+    }
+
+    // Verificar si ya existen usuarios
+    const countUsuarios = await db.usuarios.count();
+    
+    if (countUsuarios === 0 && idAlmacenPrincipal && idAlmacenVendedor) {
+      console.log("Creando usuarios por defecto...");
+      // Agregar usuarios por defecto
+      await db.usuarios.bulkAdd([
+        {
+          usuario: "admin",
+          password: "admin123", // En una aplicación real deberías usar hash
+          rol: "admin",
+          nombre: "Administrador",
+          subalmacenId: idAlmacenPrincipal
+        },
+        {
+          usuario: "vendedor",
+          password: "vendedor123", // En una aplicación real deberías usar hash
+          rol: "trabajador",
+          nombre: "Vendedor",
+          subalmacenId: idAlmacenVendedor
+        }
+      ]);
+      console.log("Usuarios creados");
+    } else {
+      console.log("Ya existen usuarios:", countUsuarios);
+    }
+    
+    // Verificar configuración
+    const themeConfig = await db.configuracion.where("clave").equals("theme").first();
+    if (!themeConfig) {
+      await db.configuracion.add({
+        clave: "theme",
+        valor: "light"
+      });
+      console.log("Configuración inicial creada");
+    }
+    
+    console.log("Inicialización de datos completada con éxito");
+  } catch (error) {
+    console.error("Error al inicializar datos:", error);
   }
 };
+

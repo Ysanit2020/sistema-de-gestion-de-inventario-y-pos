@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/ui-custom/Navigation";
 import Index from "./pages/Index";
@@ -62,10 +62,34 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
     // Inicializar la base de datos con datos de ejemplo
-    inicializarDatos();
+    const init = async () => {
+      console.log("Inicializando aplicación...");
+      try {
+        await inicializarDatos();
+        setInitialized(true);
+        console.log("Aplicación inicializada correctamente");
+      } catch (error) {
+        console.error("Error al inicializar la aplicación:", error);
+      }
+    };
+    
+    init();
   }, []);
+
+  if (!initialized) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2">Cargando Sistema...</h2>
+          <p className="text-muted-foreground">Inicializando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

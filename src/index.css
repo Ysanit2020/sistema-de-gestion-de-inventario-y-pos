@@ -84,6 +84,16 @@
     @apply bg-background text-foreground font-sans;
   }
   
+  /* Ensure form inputs have proper colors in dark mode */
+  input, select, textarea {
+    @apply bg-background text-foreground border-border;
+  }
+  
+  /* Ensure table cells have proper text color */
+  td, th {
+    @apply text-foreground;
+  }
+  
   /* Glass effect */
   .glass-effect {
     @apply bg-white/70 backdrop-blur-md border border-white/30 shadow-sm;
@@ -145,3 +155,4 @@
     @apply translate-x-0 translate-y-0;
   }
 }
+
