@@ -57,6 +57,18 @@ export interface InventarioSubalmacenInterface {
   stock: number;
 }
 
+export interface MovimientoInventarioInterface {
+  id?: number;
+  fecha: Date;
+  productoId: number;
+  subalmacenId: number;
+  cantidad: number;
+  tipo: 'entrada' | 'salida' | 'transferencia';
+  descripcion?: string;
+  documentoRef?: string;
+  usuarioId?: number;
+}
+
 // Verificar si estamos en entorno Electron
 export const isElectron = () => {
   return window.electronAPI !== undefined;
@@ -498,6 +510,66 @@ export const dbAPI = {
     } else {
       console.warn("Electron no disponible");
       return localStorage.getItem("theme") || "light";
+    }
+  },
+  
+  // Movimientos de inventario
+  getMovimientosInventario: async (): Promise<MovimientoInventarioInterface[]> => {
+    if (isElectron()) {
+      return window.electronAPI.getMovimientosInventario();
+    } else {
+      console.warn("Electron no disponible, usando datos de ejemplo");
+      try {
+        return await db.movimientosInventario.toArray();
+      } catch (error) {
+        console.error("Error al obtener movimientos:", error);
+        return [];
+      }
+    }
+  },
+  
+  saveMovimientoInventario: async (movimiento: MovimientoInventarioInterface): Promise<MovimientoInventarioInterface> => {
+    if (isElectron()) {
+      return window.electronAPI.saveMovimientoInventario(movimiento);
+    } else {
+      console.warn("Electron no disponible");
+      try {
+        const id = await db.movimientosInventario.add(movimiento);
+        
+        // Actualizar el inventario según el tipo de movimiento
+        const inventarioActual = await db.inventarioSubalmacen
+          .where('productoId')
+          .equals(movimiento.productoId)
+          .and(inv => inv.subalmacenId === movimiento.subalmacenId)
+          .first();
+        
+        if (inventarioActual) {
+          // Si ya existe el producto en el inventario, actualizar stock
+          let nuevoStock = inventarioActual.stock;
+          
+          if (movimiento.tipo === 'entrada') {
+            nuevoStock += movimiento.cantidad;
+          } else if (movimiento.tipo === 'salida') {
+            nuevoStock -= movimiento.cantidad;
+          }
+          
+          await db.inventarioSubalmacen.update(inventarioActual.id!, {
+            stock: nuevoStock
+          });
+        } else if (movimiento.tipo === 'entrada') {
+          // Si no existe y es una entrada, crear nueva entrada de inventario
+          await db.inventarioSubalmacen.add({
+            productoId: movimiento.productoId,
+            subalmacenId: movimiento.subalmacenId,
+            stock: movimiento.cantidad
+          });
+        }
+        
+        return { ...movimiento, id };
+      } catch (error) {
+        console.error("Error al guardar movimiento:", error);
+        return movimiento;
+      }
     }
   }
 };

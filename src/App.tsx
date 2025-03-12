@@ -17,6 +17,7 @@ import Reportes from "./pages/Reportes";
 import Login from "./pages/Login";
 import Configuracion from "./pages/Configuracion";
 import Subalmacenes from "./pages/Subalmacenes";
+import MovimientosInventario from "./pages/MovimientosInventario";
 import { inicializarDatos } from "./services/database";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const AppRoutes = () => {
       <Route path="/reportes" element={<ProtectedRoute element={<Reportes />} />} />
       <Route path="/configuracion" element={<ProtectedRoute element={<Configuracion />} />} />
       <Route path="/subalmacenes" element={<ProtectedRoute element={<Subalmacenes />} adminOnly={true} />} />
+      <Route path="/movimientos" element={<ProtectedRoute element={<MovimientosInventario />} adminOnly={true} />} />
       <Route path="/landing" element={<Index />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

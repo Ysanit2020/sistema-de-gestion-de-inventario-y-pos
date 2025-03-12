@@ -39,6 +39,8 @@ const ProductoForm = () => {
   });
   
   const [error, setError] = useState("");
+  const [stockActual, setStockActual] = useState(0);
+  const [subalmacenId, setSubalmacenId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isEditMode) {
@@ -51,6 +53,24 @@ const ProductoForm = () => {
       const productoExistente = await db.productos.get(productoId);
       
       if (productoExistente) {
+        // Obtener subalmacén principal (el primero)
+        const subalmacenes = await db.subalmacenes.toArray();
+        if (subalmacenes.length > 0) {
+          const almacenPrincipal = subalmacenes[0];
+          setSubalmacenId(almacenPrincipal.id!);
+          
+          // Obtener stock actual en el subalmacén principal
+          const inventario = await db.inventarioSubalmacen
+            .where('productoId')
+            .equals(productoId)
+            .and(item => item.subalmacenId === almacenPrincipal.id)
+            .first();
+          
+          if (inventario) {
+            setStockActual(inventario.stock);
+          }
+        }
+        
         setProducto({
           codigo: productoExistente.codigo,
           nombre: productoExistente.nombre,
@@ -58,7 +78,7 @@ const ProductoForm = () => {
           categoria: productoExistente.categoria,
           precio: productoExistente.precio.toString(),
           costo: productoExistente.costo?.toString() || "",
-          stock: productoExistente.stock.toString(),
+          stock: stockActual.toString(), // Usamos el stock del inventario, no del producto
           stockMinimo: productoExistente.stockMinimo?.toString() || "5"
         });
       } else {
@@ -132,7 +152,41 @@ const ProductoForm = () => {
       };
       
       if (isEditMode) {
+        // Actualizar el producto en la tabla de productos
         await db.productos.update(Number(id), productoGuardar);
+        
+        // Calcular la diferencia de stock para actualizar el inventario
+        const diferencia = Number(producto.stock) - stockActual;
+        
+        if (diferencia !== 0 && subalmacenId) {
+          // Obtener el registro de inventario actual
+          const inventarioActual = await db.inventarioSubalmacen
+            .where('productoId')
+            .equals(Number(id))
+            .and(item => item.subalmacenId === subalmacenId)
+            .first();
+          
+          if (inventarioActual) {
+            // Actualizar el stock en el inventario
+            await db.inventarioSubalmacen.update(inventarioActual.id!, {
+              stock: inventarioActual.stock + diferencia
+            });
+            
+            // Registrar el movimiento en el historial (implementaremos esto más adelante)
+            const fechaActual = new Date();
+            await db.movimientosInventario.add({
+              fecha: fechaActual,
+              productoId: Number(id),
+              subalmacenId: subalmacenId,
+              cantidad: diferencia,
+              tipo: diferencia > 0 ? 'entrada' : 'salida',
+              descripcion: `Modificación de producto - ${fechaActual.toLocaleString()}`
+            });
+            
+            console.log(`Stock actualizado: ${inventarioActual.stock} → ${inventarioActual.stock + diferencia}`);
+          }
+        }
+        
         toast({
           title: "Éxito",
           description: "Producto actualizado correctamente",
@@ -161,6 +215,16 @@ const ProductoForm = () => {
             productoId: nuevoProductoId,
             subalmacenId: almacenPrincipal.id!,
             stock: Number(producto.stock)
+          });
+          
+          // Registrar el movimiento en el historial
+          await db.movimientosInventario.add({
+            fecha: new Date(),
+            productoId: nuevoProductoId,
+            subalmacenId: almacenPrincipal.id!,
+            cantidad: Number(producto.stock),
+            tipo: 'entrada',
+            descripcion: 'Creación inicial de producto'
           });
         }
         
@@ -213,7 +277,7 @@ const ProductoForm = () => {
                 name="codigo"
                 value={producto.codigo}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 disabled={isEditMode}
                 required
               />
@@ -229,7 +293,7 @@ const ProductoForm = () => {
                 name="nombre"
                 value={producto.nombre}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 required
               />
             </div>
@@ -243,7 +307,7 @@ const ProductoForm = () => {
                 name="descripcion"
                 value={producto.descripcion}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 rows={3}
               />
             </div>
@@ -258,7 +322,7 @@ const ProductoForm = () => {
                 name="categoria"
                 value={producto.categoria}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
               />
             </div>
             
@@ -272,7 +336,7 @@ const ProductoForm = () => {
                 name="precio"
                 value={producto.precio}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 min="0"
                 step="0.01"
                 required
@@ -289,7 +353,7 @@ const ProductoForm = () => {
                 name="costo"
                 value={producto.costo}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 min="0"
                 step="0.01"
               />
@@ -297,7 +361,7 @@ const ProductoForm = () => {
             
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="stock">
-                Stock *
+                {isEditMode ? `Stock (Actual: ${stockActual})` : "Stock Inicial *"}
               </label>
               <input
                 type="number"
@@ -305,10 +369,19 @@ const ProductoForm = () => {
                 name="stock"
                 value={producto.stock}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 min="0"
                 required
               />
+              {isEditMode && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {Number(producto.stock) > stockActual 
+                    ? `Se agregarán ${Number(producto.stock) - stockActual} unidades al inventario` 
+                    : Number(producto.stock) < stockActual 
+                      ? `Se retirarán ${stockActual - Number(producto.stock)} unidades del inventario`
+                      : "No hay cambios en el stock"}
+                </p>
+              )}
             </div>
             
             <div>
@@ -321,7 +394,7 @@ const ProductoForm = () => {
                 name="stockMinimo"
                 value={producto.stockMinimo}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-background text-foreground"
                 min="0"
               />
             </div>

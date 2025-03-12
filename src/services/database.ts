@@ -9,18 +9,20 @@ export class AppDatabase extends Dexie {
   subalmacenes: Dexie.Table<SubalmacenInterface, number>;
   inventarioSubalmacen: Dexie.Table<InventarioSubalmacenInterface, number>;
   configuracion: Dexie.Table<ConfiguracionInterface, number>;
+  movimientosInventario: Dexie.Table<MovimientoInventarioInterface, number>;
 
   constructor() {
     super("gestorDB");
     
     // Definir esquemas de tablas
-    this.version(3).stores({
+    this.version(4).stores({
       productos: "++id, codigo, nombre, categoria, precio",
       ventas: "++id, fecha",
       usuarios: "++id, usuario, password, rol, subalmacenId",
       subalmacenes: "++id, nombre",
       inventarioSubalmacen: "++id, productoId, subalmacenId, [productoId+subalmacenId]",
-      configuracion: "++id, clave, valor"
+      configuracion: "++id, clave, valor",
+      movimientosInventario: "++id, fecha, productoId, subalmacenId, tipo"
     });
     
     // Typed tables
@@ -30,6 +32,7 @@ export class AppDatabase extends Dexie {
     this.subalmacenes = this.table("subalmacenes");
     this.inventarioSubalmacen = this.table("inventarioSubalmacen");
     this.configuracion = this.table("configuracion");
+    this.movimientosInventario = this.table("movimientosInventario");
   }
 }
 
@@ -94,6 +97,18 @@ export interface ConfiguracionInterface {
   id?: number;
   clave: string;
   valor: string;
+}
+
+export interface MovimientoInventarioInterface {
+  id?: number;
+  fecha: Date;
+  productoId: number;
+  subalmacenId: number;
+  cantidad: number;
+  tipo: 'entrada' | 'salida' | 'transferencia';
+  descripcion?: string;
+  documentoRef?: string;
+  usuarioId?: number;
 }
 
 // Instancia de la base de datos
