@@ -41,6 +41,7 @@ const ProductoForm = () => {
   const [error, setError] = useState("");
   const [stockActual, setStockActual] = useState(0);
   const [subalmacenId, setSubalmacenId] = useState<number | null>(null);
+  const [modoEntrada, setModoEntrada] = useState(true);
 
   useEffect(() => {
     if (isEditMode) {
@@ -78,7 +79,7 @@ const ProductoForm = () => {
           categoria: productoExistente.categoria,
           precio: productoExistente.precio.toString(),
           costo: productoExistente.costo?.toString() || "",
-          stock: stockActual.toString(), // Usamos el stock del inventario, no del producto
+          stock: "0", // Inicializamos en 0 para que el usuario agregue solo la cantidad a incrementar
           stockMinimo: productoExistente.stockMinimo?.toString() || "5"
         });
       } else {
@@ -147,50 +148,81 @@ const ProductoForm = () => {
         categoria: producto.categoria,
         precio: Number(producto.precio),
         costo: producto.costo ? Number(producto.costo) : 0,
-        stock: Number(producto.stock),
+        stock: Number(producto.stock), // Esto se usará para nuevo producto
         stockMinimo: producto.stockMinimo ? Number(producto.stockMinimo) : 5
       };
       
       if (isEditMode) {
-        // Actualizar el producto en la tabla de productos
-        await db.productos.update(Number(id), productoGuardar);
+        // Obtener el producto actual para guardar los datos correctos
+        const productoActual = await db.productos.get(Number(id));
         
-        // Calcular la diferencia de stock para actualizar el inventario
-        const diferencia = Number(producto.stock) - stockActual;
-        
-        if (diferencia !== 0 && subalmacenId) {
-          // Obtener el registro de inventario actual
-          const inventarioActual = await db.inventarioSubalmacen
-            .where('productoId')
-            .equals(Number(id))
-            .and(item => item.subalmacenId === subalmacenId)
-            .first();
+        if (productoActual) {
+          // Actualizar el producto en la tabla de productos (sin cambiar stock aquí)
+          await db.productos.update(Number(id), {
+            ...productoActual,
+            nombre: productoGuardar.nombre,
+            descripcion: productoGuardar.descripcion,
+            categoria: productoGuardar.categoria,
+            precio: productoGuardar.precio,
+            costo: productoGuardar.costo,
+            stockMinimo: productoGuardar.stockMinimo
+          });
           
-          if (inventarioActual) {
-            // Actualizar el stock en el inventario
-            await db.inventarioSubalmacen.update(inventarioActual.id!, {
-              stock: inventarioActual.stock + diferencia
-            });
+          // Calcular la cantidad a agregar o restar al inventario
+          const cantidadCambio = Number(producto.stock); // La cantidad ingresada es el cambio
+          
+          if (cantidadCambio !== 0 && subalmacenId) {
+            // Obtener el registro de inventario actual
+            const inventarioActual = await db.inventarioSubalmacen
+              .where('productoId')
+              .equals(Number(id))
+              .and(item => item.subalmacenId === subalmacenId)
+              .first();
             
-            // Registrar el movimiento en el historial (implementaremos esto más adelante)
-            const fechaActual = new Date();
-            await db.movimientosInventario.add({
-              fecha: fechaActual,
-              productoId: Number(id),
-              subalmacenId: subalmacenId,
-              cantidad: diferencia,
-              tipo: diferencia > 0 ? 'entrada' : 'salida',
-              descripcion: `Modificación de producto - ${fechaActual.toLocaleString()}`
-            });
-            
-            console.log(`Stock actualizado: ${inventarioActual.stock} → ${inventarioActual.stock + diferencia}`);
+            if (inventarioActual) {
+              // Determinar el tipo de movimiento (entrada o salida)
+              const tipoMovimiento = modoEntrada ? 'entrada' : 'salida';
+              const cantidadAjustada = modoEntrada ? cantidadCambio : -cantidadCambio;
+              
+              // Actualizar el stock en el inventario
+              const nuevoStock = inventarioActual.stock + cantidadAjustada;
+              
+              // Verificar que el stock no quede negativo
+              if (!modoEntrada && nuevoStock < 0) {
+                toast({
+                  title: "Error",
+                  description: `No se puede retirar más de lo que hay en stock (${inventarioActual.stock} unidades)`,
+                  variant: "destructive"
+                });
+                return;
+              }
+              
+              await db.inventarioSubalmacen.update(inventarioActual.id!, {
+                stock: nuevoStock
+              });
+              
+              // Registrar el movimiento en el historial
+              const fechaActual = new Date();
+              await db.movimientosInventario.add({
+                fecha: fechaActual,
+                productoId: Number(id),
+                subalmacenId: subalmacenId,
+                cantidad: Math.abs(cantidadCambio),
+                tipo: tipoMovimiento,
+                descripcion: `${tipoMovimiento === 'entrada' ? 'Entrada' : 'Salida'} de producto - ${fechaActual.toLocaleString()}`
+              });
+              
+              console.log(`Stock actualizado: ${inventarioActual.stock} → ${nuevoStock}`);
+            }
           }
+          
+          toast({
+            title: "Éxito",
+            description: modoEntrada 
+                ? `Producto actualizado y se agregaron ${producto.stock} unidades` 
+                : `Producto actualizado y se retiraron ${producto.stock} unidades`,
+          });
         }
-        
-        toast({
-          title: "Éxito",
-          description: "Producto actualizado correctamente",
-        });
       } else {
         const productoExistente = await db.productos
           .where('codigo')
@@ -360,27 +392,63 @@ const ProductoForm = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="stock">
-                {isEditMode ? `Stock (Actual: ${stockActual})` : "Stock Inicial *"}
-              </label>
-              <input
-                type="number"
-                id="stock"
-                name="stock"
-                value={producto.stock}
-                onChange={handleChange}
-                className="w-full p-2 border rounded-md bg-background text-foreground"
-                min="0"
-                required
-              />
-              {isEditMode && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {Number(producto.stock) > stockActual 
-                    ? `Se agregarán ${Number(producto.stock) - stockActual} unidades al inventario` 
-                    : Number(producto.stock) < stockActual 
-                      ? `Se retirarán ${stockActual - Number(producto.stock)} unidades del inventario`
-                      : "No hay cambios en el stock"}
-                </p>
+              {isEditMode ? (
+                <>
+                  <div className="flex justify-between">
+                    <label className="block text-sm font-medium mb-1" htmlFor="stock">
+                      Stock Actual: <span className="font-bold">{stockActual}</span>
+                    </label>
+                    <div className="space-x-2">
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-xs rounded ${modoEntrada ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setModoEntrada(true)}
+                      >
+                        Entrada
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-2 py-1 text-xs rounded ${!modoEntrada ? 'bg-red-500 text-white' : 'bg-gray-200'}`}
+                        onClick={() => setModoEntrada(false)}
+                      >
+                        Salida
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="number"
+                      id="stock"
+                      name="stock"
+                      value={producto.stock}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded-md bg-background text-foreground"
+                      min="0"
+                      placeholder={modoEntrada ? "Cantidad a agregar" : "Cantidad a retirar"}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {modoEntrada 
+                      ? `Se agregarán ${Number(producto.stock) || 0} unidades al inventario (Total: ${stockActual + (Number(producto.stock) || 0)})` 
+                      : `Se retirarán ${Number(producto.stock) || 0} unidades del inventario (Total: ${stockActual - (Number(producto.stock) || 0)})`}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium mb-1" htmlFor="stock">
+                    Stock Inicial *
+                  </label>
+                  <input
+                    type="number"
+                    id="stock"
+                    name="stock"
+                    value={producto.stock}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md bg-background text-foreground"
+                    min="0"
+                    required
+                  />
+                </>
               )}
             </div>
             
