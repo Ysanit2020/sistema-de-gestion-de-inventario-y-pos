@@ -21,5 +21,7 @@ interface Window {
     changePassword: (userId: number, oldPassword: string, newPassword: string) => Promise<boolean>;
     saveTheme: (theme: string) => Promise<boolean>;
     getTheme: () => Promise<string>;
+    getMovimientosInventario: () => Promise<any[]>;
+    saveMovimientoInventario: (movimiento: any) => Promise<any>;
   };
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "@/components/ui-custom/Button";
@@ -43,28 +42,22 @@ const MovimientosInventario = () => {
 
   const cargarDatos = async () => {
     try {
-      // Cargar productos
       const productosDB = await db.productos.toArray();
       setProductos(productosDB);
 
-      // Cargar subalmacenes
       const subalmacenesDB = await db.subalmacenes.toArray();
       setSubalmacenes(subalmacenesDB);
       
-      // Si no hay subalmacén seleccionado, seleccionar el primero por defecto
       if (subalmacenesDB.length > 0 && !subalmacenId) {
         setSubalmacenId(subalmacenesDB[0].id || null);
       }
 
-      // Cargar movimientos con filtros
       let movimientosCollection = db.movimientosInventario.orderBy('fecha').reverse();
       
-      // Filtrar por tipo
       if (filtroPorTipo !== 'todos') {
         movimientosCollection = movimientosCollection.filter(m => m.tipo === filtroPorTipo);
       }
       
-      // Filtrar por fecha
       if (filtroPorFecha !== 'todos') {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
@@ -102,7 +95,6 @@ const MovimientosInventario = () => {
       return;
     }
 
-    // Verificar si el producto ya está en la lista
     const existente = productosEnFormulario.find(p => p.productoId === productoSeleccionado);
     if (existente) {
       setProductosEnFormulario(productosEnFormulario.map(p => 
@@ -123,7 +115,6 @@ const MovimientosInventario = () => {
       ]);
     }
 
-    // Limpiar selección para siguiente producto
     setProductoSeleccionado(null);
     setCantidad(1);
   };
@@ -152,16 +143,13 @@ const MovimientosInventario = () => {
         return;
       }
 
-      // Para cada producto, registrar movimiento y actualizar inventario
       for (const item of productosEnFormulario) {
-        // Verificar inventario actual
         let inventarioActual = await db.inventarioSubalmacen
           .where('productoId')
           .equals(item.productoId)
           .and(inv => inv.subalmacenId === subalmacenId)
           .first();
 
-        // Si es salida, verificar stock suficiente
         if (tipoMovimiento === 'salida' && (!inventarioActual || inventarioActual.stock < item.cantidad)) {
           toast({
             title: "Error",
@@ -171,7 +159,6 @@ const MovimientosInventario = () => {
           return;
         }
 
-        // Registrar movimiento
         await db.movimientosInventario.add({
           fecha: fechaActual,
           productoId: item.productoId,
@@ -182,9 +169,7 @@ const MovimientosInventario = () => {
           documentoRef: documentoRef
         });
 
-        // Actualizar inventario
         if (inventarioActual) {
-          // Actualizar stock existente
           const nuevoStock = tipoMovimiento === 'entrada' 
             ? inventarioActual.stock + item.cantidad 
             : inventarioActual.stock - item.cantidad;
@@ -193,7 +178,6 @@ const MovimientosInventario = () => {
             stock: nuevoStock
           });
         } else if (tipoMovimiento === 'entrada') {
-          // Crear nuevo registro de inventario
           await db.inventarioSubalmacen.add({
             productoId: item.productoId,
             subalmacenId: subalmacenId,
@@ -207,13 +191,11 @@ const MovimientosInventario = () => {
         description: "Movimiento registrado correctamente",
       });
 
-      // Limpiar formulario
       setProductosEnFormulario([]);
       setDocumentoRef("");
       setDescripcion("");
       setMostrarFormulario(false);
       
-      // Recargar datos
       cargarDatos();
     } catch (error) {
       console.error("Error al registrar movimiento:", error);
@@ -225,19 +207,16 @@ const MovimientosInventario = () => {
     }
   };
 
-  // Obtener nombre de producto
   const getNombreProducto = (id: number) => {
     const producto = productos.find(p => p.id === id);
     return producto ? producto.nombre : "Producto no encontrado";
   };
 
-  // Obtener nombre de subalmacén
   const getNombreSubalmacen = (id: number) => {
     const subalmacen = subalmacenes.find(s => s.id === id);
     return subalmacen ? subalmacen.nombre : "Almacén no encontrado";
   };
 
-  // Filtrar movimientos por búsqueda
   const movimientosFiltrados = movimientos.filter(movimiento => {
     const producto = productos.find(p => p.id === movimiento.productoId);
     const subalmacen = subalmacenes.find(s => s.id === movimiento.subalmacenId);
@@ -279,14 +258,14 @@ const MovimientosInventario = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="md:col-span-3 flex justify-start gap-2 mb-4">
               <Button
-                variant={tipoMovimiento === 'entrada' ? 'default' : 'outline'}
+                variant={tipoMovimiento === 'entrada' ? 'primary' : 'outline'}
                 className="flex items-center"
                 onClick={() => setTipoMovimiento('entrada')}
               >
                 <ArrowDown className="mr-2 h-4 w-4" /> Entrada
               </Button>
               <Button
-                variant={tipoMovimiento === 'salida' ? 'default' : 'outline'}
+                variant={tipoMovimiento === 'salida' ? 'primary' : 'outline'}
                 className="flex items-center"
                 onClick={() => setTipoMovimiento('salida')}
               >
