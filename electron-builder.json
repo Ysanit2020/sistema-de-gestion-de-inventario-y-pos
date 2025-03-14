@@ -1,0 +1,36 @@
+
+{
+  "appId": "com.inventario.app",
+  "productName": "Sistema de Gestión de Inventario",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*"
+  ],
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "public/warehouse.svg"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "mac": {
+    "target": [
+      "dmg"
+    ],
+    "icon": "public/warehouse.svg"
+  },
+  "linux": {
+    "target": [
+      "AppImage"
+    ],
+    "icon": "public/warehouse.svg"
+  }
+}
